@@ -16,9 +16,11 @@ read, never mounted.
 | Screen | Full-screen colours, gradients, edge frame, backlight dim/bright | ✔ |
 | Keyboard | On-screen keyboard; every physical key lights up (layout-independent) | ✔ |
 | Touchpad / mouse | Reach targets, left/right click, scroll, drag, "does it jump?" | ✔ |
+| Webcam | Live preview (darkness/privacy-shutter hint), multiple cameras incl. IR | ✔ |
 | Speakers & microphone | Left/right test tones, record and play back | ✔ |
 | Battery & charging | Wear (capacity vs. design), cycles, charger detection, power draw | – |
 | Network adapters | Ethernet/Wi-Fi detection, drivers, missing firmware, Wi-Fi scan | – |
+| Bluetooth | Adapter detection, radio switches, power-on, scan for nearby devices | – |
 | Storage drives | SMART health and attributes (SATA and NVMe), drive self-test, read speed | – |
 | Memory (RAM) | `memtester` patterns, ECC (EDAC) error counters | – |
 | Processor stress & cooling | `stress-ng --verify` on all cores while watching temperature, clock throttling and fans | – |
@@ -27,11 +29,17 @@ read, never mounted.
 The hands-on tests come first, so after a few minutes you can leave the computer while the long
 automatic tests run.
 
+### Games while you wait
+
+During the automatic tests you can play **Snake**, **2048** or **Minesweeper** from the progress
+screen, with the progress bar staying visible. If the tests finish mid-game, a banner offers the
+results instead of interrupting you.
+
 ### Test profiles
 
 | Profile | Time | Contents |
 |---|---|---|
-| **Quick check** | ~5 min | Screen, keyboard, touchpad, battery, network, SMART health, 512 MB RAM, 1 min CPU stress |
+| **Quick check** | ~5 min | Screen, keyboard, touchpad, webcam, battery, Wi-Fi, Bluetooth, SMART health, 512 MB RAM, 1 min CPU stress |
 | **Standard** | ~20–40 min | Everything + audio, drive self-test, 1 GB read test, half the RAM (≤4 GB), 5 min stress |
 | **Full / overnight** | 1–3 h+ | 85% of RAM × 2 passes, 20 min stress, drive self-test, 4 GB read test |
 | **Custom** | – | Choose individual tests |
@@ -89,7 +97,7 @@ If the graphical interface can't start, the troubleshooter falls back to text mo
 src/troubleshoot/          the Python app (stdlib + Tkinter only)
   checks/                  automated tests: each returns a Result with explanation + next steps
   interactive.py           turns answers from hands-on tests into results (shared by GUI/text UI)
-  gui/                     full-screen Tk interface (screen/keyboard/pointer/audio pages)
+  gui/                     full-screen Tk interface (screen/keyboard/pointer/webcam/audio pages, games)
   text_ui.py               text-mode fallback
   report.py                verdict, text/HTML report, saving to USB
   catalog.py               test list and the Quick/Standard/Full/Custom profiles
@@ -121,6 +129,8 @@ interpretation logic.
   appear with specific software, temperatures or timing.
 - **x86-64 PCs only** (no Apple Silicon/ARM). Intel Macs boot, but often lack Wi-Fi and
   sound drivers.
-- Webcam, Bluetooth, card readers and USB-port-by-port tests aren't included yet.
+- Card readers and USB-port-by-port tests aren't included yet.
+- Newer laptops with Intel IPU6/MIPI cameras need drivers Debian doesn't ship, so their webcam
+  is reported as "can't be tested here", not as faulty.
 - Very new hardware may need drivers/firmware newer than Debian 13 ships. The app reports this as
   "not detected / not tested", not as a hardware failure.

@@ -174,3 +174,63 @@ def audio_result(left: bool | None, right: bool | None, mic: bool | None, mic_le
                       explanation="You heard the test tones on each side and the microphone picked up sound.")
     return Result("audio", "Speakers & microphone", Status.FAIL,
                   "Problem: " + "; ".join(problems) + ".", details, " ".join(expl), steps)
+
+
+WEBCAM_PROBLEMS = {
+    "black": ("The picture was black",
+              "A black picture usually means a privacy shutter is closed, a camera-off key is active, or "
+              "the camera is disabled in the BIOS. If none of those apply, the camera or its cable "
+              "(running through the screen hinge) is faulty."),
+    "blurry": ("The picture was blurry, dim or noisy",
+               "Check for a smudged lens or protective film first. Very poor image quality on a camera that "
+               "used to be fine points at a failing sensor."),
+    "colors": ("Wrong colours, lines or a frozen picture",
+               "Coloured lines, a frozen image or wrong colours usually come from a loose or damaged camera "
+               "cable."),
+}
+
+
+def webcam_result(cameras: list[str], seen: bool | None, problems: list[str], laptop: bool,
+                  capture_ok: bool | None, mipi: bool = False) -> Result:
+    name = "Webcam"
+    details = [f"Camera: {c}" for c in cameras]
+    if not cameras:
+        if mipi:
+            return Result("webcam", name, Status.SKIP,
+                          "This laptop's camera type can't be tested from this system.",
+                          ["MIPI/IPU camera detected"],
+                          explanation="Newer laptops often use \"MIPI\" cameras that need special drivers "
+                                      "this test system doesn't include. That's not a fault.",
+                          next_steps=["Test the camera in your normal OS's camera app."])
+        if not laptop:
+            return Result("webcam", name, Status.SKIP, "No webcam connected.",
+                          explanation="No camera was found. That's normal for desktops without a USB webcam.")
+        return Result("webcam", name, Status.WARN, "No webcam was found.", details,
+                      explanation="Laptops almost always have a webcam. When it's missing entirely it's usually "
+                                  "disabled in the BIOS, turned off with a camera key or switch, or its cable "
+                                  "(in the screen hinge) is disconnected – common after a screen repair.",
+                      next_steps=["Look for a camera on/off key or a privacy switch on the side or top of the laptop.",
+                                  "Check the BIOS for a camera / webcam setting.",
+                                  "If it's missing in your normal OS too, have the camera cable checked."])
+    if capture_ok is False:
+        return Result("webcam", name, Status.FAIL, "The webcam was detected, but no picture could be captured.",
+                      details,
+                      explanation="The computer sees the camera, but it doesn't deliver images. A loose cable, a "
+                                  "privacy switch, or a failing camera module can cause this.",
+                      next_steps=["Check privacy switches/keys, then test again.",
+                                  "If it fails in your normal OS too, the camera or its cable needs repair."])
+    if seen is None:
+        return Result("webcam", name, Status.PASS if capture_ok else Status.SKIP,
+                      "The webcam captured a picture (not shown in text mode)." if capture_ok
+                      else "Webcam test was skipped.", details)
+    if seen and not problems:
+        return Result("webcam", name, Status.PASS, "The webcam shows a clear picture.", details,
+                      explanation="The camera delivered a live picture and you confirmed it looks right.")
+    problems = problems or ["black"]
+    details += [WEBCAM_PROBLEMS[p][0] for p in problems]
+    return Result("webcam", name, Status.FAIL if "black" in problems or "colors" in problems else Status.WARN,
+                  "Webcam problem: " + "; ".join(WEBCAM_PROBLEMS[p][0].lower() for p in problems) + ".",
+                  details, " ".join(WEBCAM_PROBLEMS[p][1] for p in problems),
+                  ["Check for a privacy shutter, a camera key, and clean the lens.",
+                   "Plug in a USB webcam to confirm the rest of the computer is fine.",
+                   "Persistent problems usually mean replacing the camera module or its cable."])

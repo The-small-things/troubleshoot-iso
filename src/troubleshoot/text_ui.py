@@ -10,10 +10,10 @@ import sys
 import tempfile
 import threading
 
-from . import catalog, report, util
+from . import camera, catalog, report, util
 from .audio import Audio, make_tone, peak_level
 from .checks import sysinfo
-from .interactive import audio_result, keyboard_result, screen_result
+from .interactive import audio_result, keyboard_result, screen_result, webcam_result
 from .model import Context, Result, Status
 from .runner import run_one
 
@@ -97,7 +97,20 @@ def audio_test() -> Result:
     return audio_result(answers["left"], answers["right"], answers["mic"], level, a.description)
 
 
-TEXT_INTERACTIVE = {"screen": screen_test, "keyboard": keyboard_test, "audio": audio_test}
+def webcam_test() -> Result:
+    cams = camera.cameras()
+    laptop = sysinfo.collect_chassis() in ("Laptop", "Tablet")
+    names = [c["name"] for c in cams]
+    if not cams:
+        return webcam_result([], None, [], laptop, None, camera.mipi_camera_present())
+    print(f"\nWebcam test: capturing a picture from {names[0]}...")
+    ok = camera.capture(cams[0]["dev"], os.path.join(tempfile.mkdtemp(), "frame.png"))
+    print("  captured OK (pictures can't be shown in text mode)" if ok else "  no picture could be captured")
+    return webcam_result(names, None, [], laptop, ok)
+
+
+TEXT_INTERACTIVE = {"screen": screen_test, "keyboard": keyboard_test, "webcam": webcam_test,
+                    "audio": audio_test}
 
 
 def run_auto(spec, params, fast: bool) -> Result:

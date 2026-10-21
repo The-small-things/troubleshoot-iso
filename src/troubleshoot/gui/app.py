@@ -15,11 +15,14 @@ from ..model import Context, Result, Status
 from ..runner import run_one
 from . import theme as T
 from .audio import AudioTest
+from .games import GAMES
 from .keyboard import KeyboardTest
 from .pointer import PointerTest
 from .screen import ScreenTest
+from .webcam import WebcamTest
 
-INTERACTIVE_PAGES = {"screen": ScreenTest, "keyboard": KeyboardTest, "pointer": PointerTest, "audio": AudioTest}
+INTERACTIVE_PAGES = {"screen": ScreenTest, "keyboard": KeyboardTest, "pointer": PointerTest,
+                     "webcam": WebcamTest, "audio": AudioTest}
 
 
 class App:
@@ -171,6 +174,8 @@ class App:
 
     def next(self):
         if self.idx >= len(self.plan):
+            if self.run_page is not None and self.run_page.winfo_exists() and self.run_page.game is not None:
+                return self.run_page.all_done(self.results_page)  # don't interrupt a game
             return self.results_page()
         spec, params = self.plan[self.idx]
         if spec.interactive:
@@ -236,16 +241,27 @@ class RunPage(tk.Frame):
         self.overall.pack(anchor="w", pady=(T.px(0.3), 0))
         self.sensors = T.label(right, "", "small", T.MUTED)
         self.sensors.pack(anchor="w")
-        T.label(right, "You can leave the computer now. The fans may get loud – that's expected. "
-                       "Results appear automatically when all tests are done.", "small", T.MUTED,
-                wrap=T.px(50)).pack(anchor="w", pady=(T.px(1), 0))
+        T.label(right, "You can leave the computer now, or play a game while you wait. The fans may get "
+                       "loud – that's expected. Results appear when all tests are done.", "small", T.MUTED,
+                wrap=T.px(55)).pack(anchor="w", pady=(T.px(0.6), 0))
         btns = tk.Frame(right, bg=T.BG)
-        btns.pack(anchor="w", pady=T.px(1))
-        self.skip_btn = T.button(btns, "Skip this test  (S)", self.skip, "secondary")
+        btns.pack(fill="x", pady=T.px(0.8))
+        self.skip_btn = T.button(btns, "Skip this test  (S)", self.skip, "secondary", "small", takefocus=0)
         self.skip_btn.pack(side="left")
-        self.log = tk.Text(right, height=8, bg="#0b1220", fg=T.MUTED, font=T.FONTS["mono"], relief="flat",
+        self.tab_btns = {}
+        for name, cls in reversed(GAMES):
+            b = T.button(btns, f"Play {name}", lambda c=cls: self.play(c), "primary", "small", takefocus=0)
+            b.pack(side="right", padx=(T.px(0.5), 0))
+            self.tab_btns[cls] = b
+        self.log_btn = T.button(btns, "Test log", self.show_log, "secondary", "small", takefocus=0)
+        self.log_btn.pack(side="right")
+        self.done_banner = tk.Frame(right, bg=T.GOOD)
+        self.content = tk.Frame(right, bg=T.BG)
+        self.content.pack(fill="both", expand=True)
+        self.log = tk.Text(self.content, height=8, bg="#0b1220", fg=T.MUTED, font=T.FONTS["mono"], relief="flat",
                            highlightthickness=0, wrap="none", state="disabled")
-        self.log.pack(fill="both", expand=True, pady=(T.px(0.5), 0))
+        self.log.pack(fill="both", expand=True)
+        self.game = None
         self.frac: float | None = 0.0
         self.after(100, self.poll)
         self.after(500, self.update_sensors)
@@ -259,9 +275,46 @@ class RunPage(tk.Frame):
             icon.configure(text=T.STATUS_ICONS[status], fg=T.STATUS_COLORS[status])
             name.configure(fg=T.MUTED)
 
+    # --- games ------------------------------------------------------------------------------
+    def play(self, cls):
+        self.close_game()
+        self.log.pack_forget()
+        self.set_skip_keys(False)  # S is a game key (WASD)
+        self.game = cls(self.content)
+        self.game.pack(fill="both", expand=True)
+
+    def close_game(self):
+        if self.game is not None:
+            self.game.destroy()
+            self.game = None
+
+    def show_log(self):
+        self.close_game()
+        self.log.pack(fill="both", expand=True)
+        self.set_skip_keys(True)
+
+    def set_skip_keys(self, on: bool):
+        for k in ("<KeyPress-s>", "<KeyPress-S>"):
+            if on:
+                self.app.root.bind(k, lambda e: self.skip())
+            else:
+                self.app.root.unbind(k)
+
+    def all_done(self, show_results):
+        """Tests finished while a game is open: offer the results instead of switching away."""
+        self.title.configure(text="All tests are done!")
+        self.desc.configure(text="")
+        self.msg.configure(text="Finish your game, then open the results.")
+        self.frac = 1.0
+        self.skip_btn.configure(state="disabled")
+        b = self.done_banner
+        b.pack(fill="x", pady=(0, T.px(0.6)), before=self.content)
+        T.label(b, "✔  All tests are finished.", "bold", "white").pack(side="left", padx=T.px(1), pady=T.px(0.5))
+        T.button(b, "See the results", show_results, "secondary", takefocus=0).pack(side="right", padx=T.px(0.6),
+                                                                                    pady=T.px(0.4))
+
     def start_test(self, spec, params):
-        self.app.root.bind("<KeyPress-s>", lambda e: self.skip())
-        self.app.root.bind("<KeyPress-S>", lambda e: self.skip())
+        self.set_skip_keys(self.game is None)
         self.spec = spec
         self.cancel = threading.Event()
         self.title.configure(text=spec.name)

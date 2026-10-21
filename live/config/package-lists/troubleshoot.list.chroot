@@ -32,6 +32,9 @@ iw
 rfkill
 wireless-regdb
 alsa-utils
+bluez
+fswebcam
+v4l-utils
 pipewire
 pipewire-bin
 wireplumber

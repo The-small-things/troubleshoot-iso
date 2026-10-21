@@ -77,6 +77,10 @@ def _batteries() -> list[str]:
             and util.read(os.path.join(base, n, "scope")) != "Device"]
 
 
+def collect_chassis() -> str:
+    return _chassis(util.read(os.path.join(util.sys_path("class", "dmi", "id"), "chassis_type")))
+
+
 def _chassis(code: str | None) -> str:
     laptops = {"8", "9", "10", "14", "31", "32"}
     desktops = {"3", "4", "5", "6", "7", "13", "15", "16", "35", "36"}

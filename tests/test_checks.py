@@ -11,7 +11,7 @@ import unittest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from troubleshoot import catalog, interactive, report, util  # noqa: E402
-from troubleshoot.checks import battery, cpu, kernel_log, memory, storage  # noqa: E402
+from troubleshoot.checks import battery, bluetooth, cpu, kernel_log, memory, storage  # noqa: E402
 from troubleshoot.model import Result, Status  # noqa: E402
 
 STRESS_OK = """stress-ng: info:  [875] dispatching hogs: 2 cpu
@@ -213,6 +213,41 @@ class InteractiveTests(unittest.TestCase):
         self.assertIs(interactive.audio_result(True, True, True, 0.4, "x").status, Status.PASS)
         self.assertIs(interactive.audio_result(True, False, None, None, "x").status, Status.FAIL)
         self.assertIs(interactive.audio_result(None, None, None, None, "x").status, Status.SKIP)
+
+
+class BluetoothTests(unittest.TestCase):
+    AD = [{"name": "hci0", "driver": "btusb"}]
+
+    def test_parse_scan(self):
+        out = ("[NEW] Device 4C:87:5D:11:22:33 Phone\n[CHG] Device 4C:87:5D:11:22:33 RSSI: -60\n"
+               "[NEW] Device AA:BB:CC:DD:EE:FF Headphones\n[CHG] Controller 00:11:22:33:44:55 Discovering: yes\n")
+        self.assertEqual(len(bluetooth.parse_scan(out)), 2)
+
+    def test_outcomes(self):
+        ev = bluetooth.evaluate
+        self.assertIs(ev(self.AD, None, True, 3, [], True).status, Status.PASS)
+        self.assertIs(ev(self.AD, None, True, 0, [], True).status, Status.INFO)
+        self.assertIs(ev(self.AD, None, False, None, [], True).status, Status.FAIL)
+        self.assertIs(ev(self.AD, "hard", None, None, [], True).status, Status.WARN)
+        self.assertIs(ev([], None, None, None, [], True).status, Status.WARN)
+        self.assertIs(ev([], None, None, None, [], False).status, Status.SKIP)
+        self.assertIn("firmware", ev([], None, None, None, ["intel/ibt-0040.sfi"], True).summary)
+
+    def test_firmware_filter(self):
+        self.assertEqual(bluetooth.bt_firmware_missing(["iwlwifi-so-a0.ucode", "rtl_bt/rtl8852bu_fw.bin"]),
+                         ["rtl_bt/rtl8852bu_fw.bin"])
+
+
+class WebcamTests(unittest.TestCase):
+    def test_outcomes(self):
+        wr = interactive.webcam_result
+        self.assertIs(wr(["Integrated Camera"], True, [], True, True).status, Status.PASS)
+        self.assertIs(wr(["Integrated Camera"], False, ["black"], True, True).status, Status.FAIL)
+        self.assertIs(wr(["Integrated Camera"], False, ["blurry"], True, True).status, Status.WARN)
+        self.assertIs(wr(["Integrated Camera"], True, [], True, False).status, Status.FAIL)
+        self.assertIs(wr([], None, [], True, None).status, Status.WARN)
+        self.assertIs(wr([], None, [], False, None).status, Status.SKIP)
+        self.assertIs(wr([], None, [], True, None, mipi=True).status, Status.SKIP)
 
 
 class ReportTests(unittest.TestCase):

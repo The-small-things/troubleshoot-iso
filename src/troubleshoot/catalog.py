@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .checks import battery, cpu, graphics, kernel_log, memory, network, storage, sysinfo
+from .checks import battery, bluetooth, cpu, graphics, kernel_log, memory, network, storage, sysinfo
 from .model import TestSpec
 
 TESTS: dict[str, TestSpec] = {t.test_id: t for t in [
@@ -13,9 +13,12 @@ TESTS: dict[str, TestSpec] = {t.test_id: t for t in [
     TestSpec("screen", "Screen", "Full-screen colours to spot dead pixels, lines and backlight problems.", True),
     TestSpec("keyboard", "Keyboard", "Press every key and watch it light up.", True),
     TestSpec("pointer", "Touchpad / mouse", "Move, click, scroll and drag to targets.", True),
+    TestSpec("webcam", "Webcam", "Live camera picture to check it works and looks right.", True),
     TestSpec("audio", "Speakers & microphone", "Left/right test tones and a microphone recording.", True),
     TestSpec("battery", "Battery & charging", "Battery wear, charger and power draw.", False, battery.run),
     TestSpec("network", "Network adapters", "Ethernet/Wi-Fi detection and a Wi-Fi scan.", False, network.run),
+    TestSpec("bluetooth", "Bluetooth", "Turns Bluetooth on and scans for nearby devices.", False,
+             bluetooth.run),
     TestSpec("storage", "Storage drives", "Drive health (SMART), self-test and read speed. Read-only.",
              False, storage.run),
     TestSpec("memory", "Memory (RAM)", "Writes and verifies test patterns in RAM.", False, memory.run),
@@ -26,8 +29,8 @@ TESTS: dict[str, TestSpec] = {t.test_id: t for t in [
 ]}
 
 # Interactive tests run first so the user can walk away during the long automated part.
-ORDER = ["sysinfo", "graphics", "screen", "keyboard", "pointer", "audio",
-         "battery", "network", "storage", "memory", "cpu", "kernel_log"]
+ORDER = ["sysinfo", "graphics", "screen", "keyboard", "pointer", "webcam", "audio",
+         "battery", "network", "bluetooth", "storage", "memory", "cpu", "kernel_log"]
 
 
 @dataclass
@@ -40,8 +43,8 @@ class Profile:
 
 
 STANDARD_PARAMS = {
-    "sysinfo": {}, "graphics": {}, "screen": {}, "keyboard": {}, "pointer": {}, "audio": {},
-    "battery": {}, "network": {"scan": True},
+    "sysinfo": {}, "graphics": {}, "screen": {}, "keyboard": {}, "pointer": {}, "webcam": {}, "audio": {},
+    "battery": {}, "network": {"scan": True}, "bluetooth": {"scan_seconds": 12},
     "storage": {"selftest": True, "read_mb": 1024},
     "memory": {"fraction": 0.5, "max_mb": 4096, "loops": 1},
     "cpu": {"seconds": 300},
@@ -50,10 +53,10 @@ STANDARD_PARAMS = {
 
 PROFILES: dict[str, Profile] = {p.key: p for p in [
     Profile("quick", "Quick check", "about 5 minutes",
-            "Fast health check: screen, keyboard, touchpad, battery, drive health, a short memory "
-            "test and a 1-minute processor stress test.",
-            {"sysinfo": {}, "graphics": {}, "screen": {}, "keyboard": {}, "pointer": {},
-             "battery": {}, "network": {"scan": True},
+            "Fast health check: screen, keyboard, touchpad, webcam, battery, Wi-Fi, Bluetooth, "
+            "drive health, a short memory test and a 1-minute processor stress test.",
+            {"sysinfo": {}, "graphics": {}, "screen": {}, "keyboard": {}, "pointer": {}, "webcam": {},
+             "battery": {}, "network": {"scan": True}, "bluetooth": {"scan_seconds": 8},
              "storage": {"selftest": False, "read_mb": 0},
              "memory": {"fraction": 0.25, "max_mb": 512, "loops": 1},
              "cpu": {"seconds": 60}, "kernel_log": {}}),

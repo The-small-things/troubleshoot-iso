@@ -1,0 +1,22 @@
+#!/bin/sh
+# Start the graphical troubleshooter; fall back to text mode if graphics can't start.
+mkdir -p /run/troubleshoot
+rm -f /run/troubleshoot/gui-started
+
+if grep -qw troubleshoot.text /proc/cmdline; then
+    exec /usr/local/bin/troubleshoot --text
+fi
+
+clear
+echo "Starting the Hardware Troubleshooter..."
+startx /usr/local/lib/troubleshoot/xsession -- -nolisten tcp vt1 -keeptty \
+    >/var/log/troubleshoot-x.log 2>&1
+
+if [ ! -e /run/troubleshoot/gui-started ]; then
+    echo
+    echo "The graphical interface could not start on this computer (see /var/log/troubleshoot-x.log)."
+    echo "That alone can point at a graphics problem. Continuing in text mode..."
+    echo
+    sleep 3
+    /usr/local/bin/troubleshoot --text
+fi

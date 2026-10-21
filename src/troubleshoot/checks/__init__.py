@@ -1,0 +1,1 @@
+"""Automated (unattended) hardware checks."""

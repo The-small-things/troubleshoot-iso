@@ -1,0 +1,25 @@
+#!/bin/sh
+# X session: no desktop and no window manager, just the troubleshooter full screen.
+
+xset s off -dpms s noblank 2>/dev/null
+
+# With several screens attached, mirror them all onto the built-in one (or the first one),
+# so the full-screen app covers exactly one display.
+outputs=$(xrandr --query | awk '/ connected/ {print $1}')
+primary=$(echo "$outputs" | grep -E '^(eDP|LVDS|DSI)' | head -n1)
+[ -n "$primary" ] || primary=$(echo "$outputs" | head -n1)
+for o in $outputs; do
+    [ "$o" = "$primary" ] || xrandr --output "$o" --auto --same-as "$primary" 2>/dev/null
+done
+xrandr --output "$primary" --auto --primary 2>/dev/null
+
+# Sound server, so speakers/microphones on modern laptops (SOF/UCM) are routed correctly.
+export XDG_RUNTIME_DIR=/run/user/0
+mkdir -p -m 0700 "$XDG_RUNTIME_DIR"
+pipewire >/var/log/pipewire.log 2>&1 &
+sleep 0.5
+wireplumber >/var/log/wireplumber.log 2>&1 &
+
+# The app creates this file once its window is up; without it the session falls back to text mode.
+export TROUBLESHOOT_STARTED_FILE=/run/troubleshoot/gui-started
+exec /usr/local/bin/troubleshoot

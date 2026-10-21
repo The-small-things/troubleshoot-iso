@@ -1,0 +1,55 @@
+name: Build ISO
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write  # attach the ISO to a GitHub release when a v* tag is pushed
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"  # the version Debian trixie ships
+      - name: Unit tests
+        run: python -m unittest discover -s tests -v
+      - name: Byte-compile everything
+        run: python -m compileall -q src
+
+  iso:
+    needs: test
+    runs-on: ubuntu-latest
+    container:
+      image: debian:trixie
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install live-build
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends live-build ca-certificates
+      - name: Build ISO
+        run: ./build.sh
+      - name: Upload build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build/build.log
+      - uses: actions/upload-artifact@v4
+        with:
+          name: troubleshoot-iso
+          path: dist/*
+          compression-level: 0
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*

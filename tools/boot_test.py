@@ -31,8 +31,10 @@ def first(paths):
     raise SystemExit(f"none of {paths} found (install ovmf)")
 
 
-def boot(iso: str, out: str, mode: str, shots: list[int], keys: dict[int, str] | None = None) -> list[str]:
-    """Take a screenshot at each time in ``shots`` (seconds); ``keys`` maps a time to a key to press."""
+def boot(iso: str, out: str, mode: str, shots: list[int], actions: dict[int, str] | None = None) -> list[str]:
+    """Take a screenshot at each time in ``shots`` (seconds). ``actions`` maps a time to a QEMU
+    monitor command, e.g. "sendkey g" or "eject -f ide1-cd0" (pull out the boot medium)."""
+    firmware = "bios" if mode.startswith("bios") else "uefi"
     tmp = tempfile.mkdtemp()
     sock = os.path.join(tmp, "monitor.sock")
     cmd = ["qemu-system-x86_64", "-m", "3072", "-smp", "2", "-vga", "std", "-display", "none",
@@ -41,7 +43,7 @@ def boot(iso: str, out: str, mode: str, shots: list[int], keys: dict[int, str] |
     kvm = os.access("/dev/kvm", os.R_OK | os.W_OK)
     if kvm:
         cmd += ["-enable-kvm", "-cpu", "host"]
-    if mode == "uefi":
+    if firmware == "uefi":
         vars_copy = os.path.join(tmp, "vars.fd")
         shutil.copy(first(OVMF_VARS), vars_copy)
         cmd += ["-drive", f"if=pflash,format=raw,readonly=on,file={first(OVMF_CODE)}",
@@ -58,7 +60,7 @@ def boot(iso: str, out: str, mode: str, shots: list[int], keys: dict[int, str] |
             time.sleep(0.1)
         mon = socket.socket(socket.AF_UNIX)
         mon.connect(sock)
-        events = sorted([(t, "shot") for t in shots] + [(t, "key") for t in (keys or {})])
+        events = sorted([(t, "shot") for t in shots] + [(t, "action") for t in (actions or {})])
         for t, kind in events:
             wait = start + t * scale - time.monotonic()
             if wait > 0:
@@ -66,9 +68,9 @@ def boot(iso: str, out: str, mode: str, shots: list[int], keys: dict[int, str] |
             if proc.poll() is not None:
                 print(f"[{mode}] QEMU exited early ({proc.returncode})")
                 break
-            if kind == "key":
-                mon.sendall(f"sendkey {keys[t]}\n".encode())
-                print(f"[{mode}] pressed {keys[t]} at {t}s", flush=True)
+            if kind == "action":
+                mon.sendall(f"{actions[t]}\n".encode())
+                print(f"[{mode}] {actions[t]} at {t}s", flush=True)
                 continue
             path = os.path.join(out, f"{mode}-{t:03d}s.png")
             mon.sendall(f"screendump {path} -f png\n".encode())
@@ -90,8 +92,13 @@ def main() -> None:
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
     # UEFI: menu, splash, welcome screen, then press G to open the Games & apps page.
-    shots = boot(a.iso, a.out, "uefi", [3, 6, 12, 20, 30, 45, 60, 80, 95], keys={70: "g"})
+    shots = boot(a.iso, a.out, "uefi", [3, 6, 12, 20, 30, 45, 60, 80, 95], actions={70: "sendkey g"})
     shots += boot(a.iso, a.out, "bios", [3, 30, 60, 90])
+    # "Load into RAM" (2nd menu entry): once the app is up, pull out the boot medium and check
+    # the system keeps working. The GRUB menu appears ~6 s in (after the firmware), so the keys
+    # are sent at 9-10 s; the 8 s shot shows the menu before the selection.
+    shots += boot(a.iso, a.out, "uefi-toram", [8, 11, 90, 110, 125],
+                  actions={9: "sendkey down", 10: "sendkey ret", 95: "eject -f ide1-cd0", 115: "sendkey g"})
     if a.print_base64:
         for p in shots:
             data = base64.b64encode(open(p, "rb").read()).decode()

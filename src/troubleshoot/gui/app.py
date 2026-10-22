@@ -177,6 +177,13 @@ class App:
         T.label(right, "Hardware Troubleshooter", "huge").pack(anchor="w")
         T.label(right, f"{self.info['vendor']} {self.info['product']}  ·  {self.info['cpu']}  ·  "
                        f"{self.info['ram_total']} RAM", fg=T.MUTED, wrap=T.px(44)).pack(anchor="w", pady=(0, T.px(1.2)))
+        ram = util.ram_boot_status()
+        if ram == "ram":
+            T.label(right, "✔  Running from memory – you can unplug the USB stick now.", "bold", T.GOOD).pack(
+                anchor="w", pady=(0, T.px(0.8)))
+        elif ram == "fallback":
+            T.label(right, "Not enough memory to run from RAM – keep the USB stick plugged in.", "bold",
+                    T.WARN).pack(anchor="w", pady=(0, T.px(0.8)))
         for n, prof in enumerate(catalog.PROFILES.values(), start=1):
             icon, color = T.PROFILE_STYLE[prof.key]
             card = T.Card(right, command=lambda p=prof: self.choose(p))

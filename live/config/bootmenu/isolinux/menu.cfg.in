@@ -34,6 +34,12 @@ label live
 	initrd /live/initrd.img
 	append @APPEND@
 
+label toram
+	menu label ^Load into RAM (then unplug the USB stick)
+	linux /live/vmlinuz
+	initrd /live/initrd.img
+	append @APPEND@ toram
+
 label safe
 	menu label Sa^fe mode (if the screen stays black)
 	linux /live/vmlinuz

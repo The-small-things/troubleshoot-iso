@@ -1,0 +1,33 @@
+==========================================================================================
+  BOOT REPAIR – when the computer says "no bootable device" or skips your OS
+==========================================================================================
+
+  Run the Hardware Troubleshooter's Storage test first: if the drive is failing or
+  missing, that's the real problem and no repair will help.
+
+  1. See what's installed and what the firmware (UEFI) tries to boot:
+
+         os-prober                 lists operating systems found on the drives
+         efibootmgr -v             lists the computer's boot entries, in boot order
+
+  2. Fix the boot ORDER (most common after updates / adding a drive). The entries look
+     like "Boot0003* Windows Boot Manager". Put the one you want first, for example:
+
+         efibootmgr -o 0003,0001
+
+  3. A boot entry is MISSING? Find the EFI system partition ("vfat", ~100-500 MB):
+
+         lsblk -f
+
+     and recreate the entry (here the ESP is partition 1 of /dev/nvme0n1):
+
+     Windows:   efibootmgr -c -d /dev/nvme0n1 -p 1 -L "Windows Boot Manager" \
+                   -l '\EFI\Microsoft\Boot\bootmgfw.efi'
+     Linux:     efibootmgr -c -d /dev/nvme0n1 -p 1 -L "Linux" -l '\EFI\debian\shimx64.efi'
+                (look in the ESP for your distribution's folder name)
+
+  4. Windows still won't start? Boot a Windows installation USB, choose
+     "Repair your computer" > Startup Repair. Lost partitions: use TestDisk.
+
+  Close this window:  exit
+==========================================================================================

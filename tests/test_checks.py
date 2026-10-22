@@ -267,6 +267,16 @@ class AppsTests(unittest.TestCase):
         self.assertTrue(all(a.category in cats for a in apps.CATALOG))
         self.assertEqual(len({a.command for a in apps.CATALOG}), len(apps.CATALOG))
 
+    def test_photorec_fallback_only_without_the_gui(self):
+        old = apps.which
+        try:
+            apps.which = lambda c: f"/usr/bin/{c}" if c in ("photorec", "qphotorec") else None
+            self.assertEqual([a.command for a in apps.installed("rescue")], ["qphotorec"])
+            apps.which = lambda c: f"/usr/bin/{c}" if c == "photorec" else None
+            self.assertEqual([a.command for a in apps.installed("rescue")], ["photorec"])
+        finally:
+            apps.which = old
+
 
 class ReportTests(unittest.TestCase):
     def results(self):
@@ -317,3 +327,59 @@ class CatalogTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RamBootTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.old = (util.SYS, util.PROC)
+        util.SYS = os.path.join(self.tmp.name, "sys")
+        util.PROC = os.path.join(self.tmp.name, "proc")
+        os.makedirs(util.PROC)
+
+    def tearDown(self):
+        util.SYS, util.PROC = self.old
+        self.tmp.cleanup()
+
+    def setup(self, cmdline, medium_fstype):
+        with open(os.path.join(util.PROC, "cmdline"), "w") as f:
+            f.write(cmdline)
+        with open(os.path.join(util.PROC, "mounts"), "w") as f:
+            f.write("proc /proc proc rw 0 0\n")
+            if medium_fstype:
+                f.write(f"/dev/sdb1 /run/live/medium {medium_fstype} ro,noatime 0 0\n")
+            f.write("/dev/loop0 /run/live/rootfs/filesystem.squashfs squashfs ro 0 0\n")
+
+    def test_normal_boot(self):
+        self.setup("boot=live quiet", "iso9660")
+        self.assertIsNone(util.ram_boot_status())
+
+    def test_loaded_into_ram(self):
+        self.setup("boot=live toram quiet", "tmpfs")
+        self.assertEqual(util.ram_boot_status(), "ram")
+
+    def test_requested_but_not_enough_memory(self):
+        self.setup("boot=live toram", "iso9660")
+        self.assertEqual(util.ram_boot_status(), "fallback")
+
+    def test_medium_unmounted_after_copy(self):
+        self.setup("boot=live toram=filesystem.squashfs", None)
+        self.assertEqual(util.ram_boot_status(), "ram")
+
+
+class TerminalAppTests(unittest.TestCase):
+    def test_terminal_apps_open_in_a_terminal(self):
+        app = apps.App("testdisk", "TestDisk", "", "rescue", terminal=True)
+        old = apps.which
+        apps.which = lambda c: {"lxterminal": "/usr/bin/lxterminal"}.get(c)
+        try:
+            cmd = apps.command_line(app, "/usr/bin/testdisk")
+            self.assertEqual(cmd[0], "/usr/bin/lxterminal")
+            self.assertIn("/usr/bin/testdisk", cmd[-1])
+            guided = apps.App("ddrescue", "Rescue", "", "rescue", terminal=True, guide="/g/ddrescue.txt")
+            self.assertIn("cat /g/ddrescue.txt", apps.command_line(guided, "/usr/bin/ddrescue")[-1])
+            apps.which = lambda c: None
+            self.assertIsNone(apps.command_line(app, "/usr/bin/testdisk"))
+            self.assertEqual(apps.command_line(apps.App("x", "X", "", "tools"), "/usr/bin/x"), ["/usr/bin/x"])
+        finally:
+            apps.which = old

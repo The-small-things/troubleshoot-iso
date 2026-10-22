@@ -104,6 +104,22 @@ def _kill(proc: subprocess.Popen) -> None:
             pass
 
 
+def ram_boot_status() -> str | None:
+    """'ram' if the live system was copied into memory (the USB stick can be unplugged),
+    'fallback' if that was requested but didn't happen (usually not enough RAM), None otherwise."""
+    cmdline = (read(os.path.join(PROC, "cmdline")) or "").split()
+    if not any(arg == "toram" or arg.startswith("toram=") for arg in cmdline):
+        return None
+    # live-boot's toram copies the boot medium into a RAM disk (tmpfs) and mounts that copy
+    # where the medium was (/run/live/medium). If the medium is still the real USB/CD
+    # filesystem there, the copy didn't happen (usually: not enough memory).
+    for line in (read(os.path.join(PROC, "mounts")) or "").splitlines():
+        parts = line.split()
+        if len(parts) >= 3 and parts[1] in ("/run/live/medium", "/lib/live/mount/medium"):
+            return "ram" if parts[2] in ("tmpfs", "ramfs") else "fallback"
+    return "ram"  # medium not mounted at all: nothing is being read from the stick
+
+
 def meminfo() -> dict[str, int]:
     """/proc/meminfo in kB."""
     out: dict[str, int] = {}

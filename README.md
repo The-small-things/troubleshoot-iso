@@ -61,8 +61,13 @@ boot stick itself.
 
 ## Getting the ISO
 
-Every push builds the ISO with GitHub Actions (**Actions → Build ISO → Artifacts**). Pushing a
-`v*` tag attaches it to a GitHub Release.
+Every push builds the ISO with GitHub Actions (**Actions → Build ISO → Artifacts**). Publishing
+a GitHub Release builds it again and attaches the ISO to that release, for example:
+
+```sh
+gh release create v1.0.0 --repo The-small-things/troubleshoot-iso --target main \
+  --title "Hardware Troubleshooter 1.0.0" --generate-notes
+```
 
 To build it yourself (about 10–20 minutes, needs ~6 GB free):
 

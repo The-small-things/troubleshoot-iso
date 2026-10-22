@@ -356,6 +356,7 @@ class Player:
         self._proc: subprocess.Popen | None = None
         self._playing: str | None = None
         self._last_sfx: dict[str, float] = {}
+        self.min_gap = 0.06  # seconds between two plays of the same effect
         self._started = 0.0
         self._quick_failures = 0  # player exiting immediately = no usable sound device
         self._lock = threading.Lock()
@@ -410,7 +411,7 @@ class Player:
         if not (self.enabled and self.cmd and self.dir) or self.paused or self.quiet:
             return
         now = time.monotonic()
-        if now - self._last_sfx.get(name, 0) < 0.06:  # don't spawn a storm of identical effects
+        if now - self._last_sfx.get(name, -1e9) < self.min_gap:  # don't spawn a storm of identical effects
             return
         self._last_sfx[name] = now
         try:  # `timeout`: with no output device a player can wait forever; don't leave it behind

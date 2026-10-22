@@ -49,7 +49,7 @@ class PlayerTests(unittest.TestCase):
             f.write(sound.VERSION)
         self.old_dir, self.old_cmd = sound.SYSTEM_DIR, sound.Player._player_cmd
         sound.SYSTEM_DIR = self.tmp.name
-        fake = ["sh", "-c", f'echo "$1" >> {self.log}; sleep 30', "fake-player"]
+        fake = ["sh", "-c", f'echo "$1" >> {self.log}; sleep 8', "fake-player"]
         sound.Player._player_cmd = staticmethod(lambda: fake)
         self.p = sound.Player()
         self.wait(lambda: self.p.dir is not None)
@@ -70,7 +70,8 @@ class PlayerTests(unittest.TestCase):
 
     def played(self):
         try:
-            return [os.path.basename(line.strip()) for line in open(self.log)]
+            with open(self.log) as f:
+                return [os.path.basename(line.strip()) for line in f]
         except OSError:
             return []
 
@@ -101,6 +102,7 @@ class PlayerTests(unittest.TestCase):
         self.assertTrue(self.wait(lambda: self.p.cmd is None, timeout=5))
 
     def test_effects_respect_mute_quiet_and_rate_limit(self):
+        self.p.min_gap = 60  # don't depend on how fast the machine starts processes
         self.p.sfx("coin")
         self.p.sfx("coin")  # within 60 ms: dropped
         self.p.quiet = True

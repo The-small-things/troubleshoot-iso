@@ -110,8 +110,10 @@ boot stick itself.
 
 ## Getting the ISO
 
-Every push builds the ISO with GitHub Actions (**Actions → Build ISO → Artifacts**). Publishing
-a GitHub Release builds it again and attaches the ISO to that release, for example:
+Every push builds the ISO with GitHub Actions (**Actions → Build ISO → Artifacts**). To publish
+a release, either run **Actions → Build ISO → Run workflow** with a release tag (e.g. `v1.2.0`),
+or publish a GitHub Release yourself. Either way the ISO is built, boot-tested, and attached to the
+release only if it boots. For example:
 
 ```sh
 gh release create v1.0.0 --repo The-small-things/troubleshoot-iso --target main \

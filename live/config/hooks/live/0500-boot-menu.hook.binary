@@ -1,0 +1,34 @@
+#!/bin/sh
+# Replace live-build's generic boot menus with the Hardware Troubleshooter's branded ones.
+# Runs in the binary/ directory after the bootloaders are set up. Sources: config/bootmenu/
+set -e
+SRC=../config/bootmenu
+
+# Reuse the kernel options live-build generated from auto/config (normal + fail-safe).
+APPEND=$(grep -m1 '^[[:space:]]*append' isolinux/live.cfg | sed 's/^[[:space:]]*append[[:space:]]*//')
+APPEND_SAFE=$(grep '^[[:space:]]*append' isolinux/live.cfg | sed -n 2p | sed 's/^[[:space:]]*append[[:space:]]*//')
+[ -n "$APPEND" ] || { echo "boot-menu hook: could not find kernel options" >&2; exit 1; }
+[ -n "$APPEND_SAFE" ] || APPEND_SAFE="$APPEND nomodeset troubleshoot.text"
+[ -e live/vmlinuz ] && [ -e live/initrd.img ] || { echo "boot-menu hook: live/vmlinuz or initrd.img missing" >&2; exit 1; }
+
+fill() {
+	sed -e "s|@APPEND@|$APPEND|g" -e "s|@APPEND_SAFE@|$APPEND_SAFE|g" "$1" > "$2"
+}
+
+# UEFI: GRUB with a graphical theme.
+if [ -d boot/grub ]; then
+	rm -rf boot/grub/chip-theme
+	cp -r "$SRC/grub/chip-theme" boot/grub/
+	cp "$SRC/grub/config.cfg" boot/grub/config.cfg
+	fill "$SRC/grub/grub.cfg.in" boot/grub/grub.cfg
+fi
+
+# BIOS: isolinux with vesamenu.
+if [ -d isolinux ]; then
+	cp "$SRC/isolinux/splash.png" isolinux/splash.png
+	cp "$SRC/isolinux/isolinux.cfg" isolinux/isolinux.cfg
+	fill "$SRC/isolinux/menu.cfg.in" isolinux/menu.cfg
+	[ -e live/memtest.bin ] || sed -i '/^label memtest/,/^$/d' isolinux/menu.cfg
+	rm -f isolinux/live.cfg isolinux/stdmenu.cfg isolinux/utilities.cfg isolinux/memtest.cfg
+fi
+echo "boot-menu hook: installed branded menus (options: $APPEND)"

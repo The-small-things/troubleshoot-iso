@@ -114,7 +114,9 @@ def run(ctx: Context) -> Result:
             msg += f" · {f:.0f} MHz"
         ctx.progress(min(1.0, elapsed / seconds), msg)
 
-    cmd = ["stress-ng", "--cpu", "0", "--verify", "--timeout", f"{seconds}s", "--metrics-brief"]
+    # Low priority: still 100% load, but the interface and games stay responsive.
+    cmd = ["nice", "-n", "10", "stress-ng", "--cpu", "0", "--verify", "--timeout", f"{seconds}s",
+           "--metrics-brief"]
     ctx.log("Running: " + " ".join(cmd))
     res = util.run_cancellable(ctx, cmd, timeout=seconds + 60, on_tick=tick, tick=2.0)
     output = (res.stdout or "") + "\n" + (res.stderr or "")

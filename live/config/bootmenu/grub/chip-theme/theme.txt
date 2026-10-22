@@ -1,0 +1,53 @@
+# GRUB theme for the Hardware Troubleshooter (UEFI boot). Artwork: tools/make_assets.py
+desktop-image: "background.png"
+desktop-color: "#0f172a"
+title-text: ""
+message-font: "DejaVu Sans Regular 16"
+message-color: "#cbd5e1"
+terminal-font: "Unifont Regular 16"
+terminal-box: "menu_*.png"
+
++ boot_menu {
+    left = 40%
+    top = 32%
+    width = 56%
+    height = 50%
+    menu_pixmap_style = "menu_*.png"
+    item_font = "DejaVu Sans Regular 16"
+    item_color = "#cbd5e1"
+    selected_item_font = "DejaVu Sans Bold 16"
+    selected_item_color = "#ffffff"
+    selected_item_pixmap_style = "select_*.png"
+    item_height = 40
+    item_padding = 10
+    item_spacing = 6
+    icon_width = 28
+    icon_height = 28
+    item_icon_space = 14
+    scrollbar = false
+}
+
++ progress_bar {
+    id = "__timeout__"
+    left = 40%
+    top = 84%
+    width = 56%
+    height = 26
+    font = "DejaVu Sans Regular 16"
+    text_color = "#e2e8f0"
+    fg_color = "#3b82f6"
+    bg_color = "#1e293b"
+    border_color = "#1e293b"
+    text = "@TIMEOUT_NOTIFICATION_LONG@"
+}
+
++ label {
+    left = 40%
+    top = 91%
+    width = 56%
+    height = 20
+    align = "center"
+    color = "#94a3b8"
+    font = "DejaVu Sans Regular 16"
+    text = "↑ ↓  choose     •     Enter  start     •     e  edit options"
+}

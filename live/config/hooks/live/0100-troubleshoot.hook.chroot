@@ -15,4 +15,14 @@ systemctl mask systemd-networkd-wait-online.service 2>/dev/null || true
 # Larger console font for the text-mode fallback on high-resolution screens.
 sed -i 's/^FONTSIZE=.*/FONTSIZE="12x24"/' /etc/default/console-setup 2>/dev/null || true
 
+# Boot splash: Chip's theme reuses the stock spinner animation frames.
+if [ -d /usr/share/plymouth/themes/spinner ]; then
+	for f in /usr/share/plymouth/themes/spinner/*.png; do
+		case "$(basename "$f")" in watermark.png|bgrt-fallback.png) continue ;; esac
+		cp -n "$f" /usr/share/plymouth/themes/chip/
+	done
+	plymouth-set-default-theme chip
+	update-initramfs -u -k all
+fi
+
 chmod 0755 /usr/local/bin/troubleshoot /usr/local/bin/troubleshoot-session /usr/local/lib/troubleshoot/xsession

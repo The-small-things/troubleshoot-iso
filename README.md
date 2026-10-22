@@ -1,7 +1,7 @@
 # Hardware Troubleshooter ISO
 
 A bootable Linux USB stick that checks a computer's hardware and explains the results in plain
-language. Boot it, pick how thorough the test should be, answer a few on-screen prompts, and get
+language, guided by **Chip**, a friendly robot made of a computer chip. Boot it, pick how thorough the test should be, answer a few on-screen prompts, and get
 a report with **what was found, what it means, and what to do next**.
 
 It runs entirely from the USB stick and **never writes to the computer's disks**. Drives are only
@@ -29,11 +29,28 @@ read, never mounted.
 The hands-on tests come first, so after a few minutes you can leave the computer while the long
 automatic tests run.
 
-### Games while you wait
+### Games while you wait (Chip's Arcade)
 
-During the automatic tests you can play **Snake**, **2048** or **Minesweeper** from the progress
-screen, with the progress bar staying visible. If the tests finish mid-game, a banner offers the
-results instead of interrupting you.
+During the automatic tests you can play a game on the progress screen while the progress bar
+stays visible. The arcade is also on the welcome screen. If the tests finish mid-game, a banner
+offers the results instead of interrupting you.
+
+| Game | Style |
+|---|---|
+| **Maze Runner 3D** | First-person ray-cast maze. Find the exit, collect chips; each win makes the maze bigger |
+| **Turbo Road** | Pseudo-3D arcade racer with curves, hills, traffic and lap times |
+| **Star Pilot 3D** | Real 3D: flat-shaded rotating asteroids, perspective, lighting; dodge rocks, catch crystals |
+| Snake, 2048, Minesweeper | The classics |
+
+The 3D games are software-rendered on a Tk canvas, so they run in a VM or on hardware without a
+working graphics driver. The stress tests run at low CPU priority so the games stay smooth.
+
+### Boot menu and splash
+
+The boot menu (GRUB on UEFI, isolinux on BIOS) shows Chip and plain-language entries: *Start
+the hardware check-up*, *Safe mode*, *Deep memory test*, *Check this USB stick for errors*,
+*BIOS/UEFI settings*, *Restart* and *Power off*. It starts the check-up automatically after
+10 seconds. While Linux loads, a Plymouth splash with Chip replaces the scrolling boot text.
 
 ### Test profiles
 
@@ -102,11 +119,14 @@ If the graphical interface can't start, the troubleshooter falls back to text mo
 src/troubleshoot/          the Python app (stdlib + Tkinter only)
   checks/                  automated tests: each returns a Result with explanation + next steps
   interactive.py           turns answers from hands-on tests into results (shared by GUI/text UI)
-  gui/                     full-screen Tk interface (screen/keyboard/pointer/webcam/audio pages, games)
+  art.py                   Chip the mascot as shapes (shared by the GUI and the boot artwork)
+  gui/                     full-screen Tk interface: test pages, mascot, arcade (games.py, games3d.py)
   text_ui.py               text-mode fallback
   report.py                verdict, text/HTML report, saving to USB
   catalog.py               test list and the Quick/Standard/Full/Custom profiles
 live/                      Debian live-build configuration (packages, autologin, X session)
+  config/bootmenu/         branded GRUB/isolinux menus, installed by hooks/live/0500-boot-menu.hook.binary
+tools/make_assets.py       renders the boot-menu/splash artwork from the Chip drawing in src/troubleshoot/art.py
 tests/                     unit tests for all the result-interpretation logic
 build.sh                   builds the ISO
 ```

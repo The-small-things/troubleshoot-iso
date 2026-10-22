@@ -15,6 +15,6 @@ lb config noauto \
 	--iso-application "Hardware Troubleshooter" \
 	--iso-publisher "troubleshoot-iso" \
 	--iso-volume "TROUBLESHOOT" \
-	--bootappend-live "boot=live components quiet noautologin nox11autologin hostname=troubleshoot" \
+	--bootappend-live "boot=live components quiet splash loglevel=3 noautologin nox11autologin hostname=troubleshoot" \
 	--bootappend-live-failsafe "boot=live components noautologin nox11autologin hostname=troubleshoot nomodeset troubleshoot.text" \
 	"${@}"

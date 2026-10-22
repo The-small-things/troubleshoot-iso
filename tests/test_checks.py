@@ -277,6 +277,20 @@ class AppsTests(unittest.TestCase):
         finally:
             apps.which = old
 
+    def test_tools_without_desktop_files_have_drawn_icons(self):
+        icons = os.path.join(os.path.dirname(__file__), "..", "live", "config", "includes.chroot", "usr", "share",
+                             "troubleshoot", "icons")
+        for a in apps.CATALOG:
+            if a.terminal or a.command == "glmark2":
+                self.assertTrue(os.path.exists(os.path.join(icons, f"{a.command}.png")), a.command)
+
+    def test_icon_falls_back_to_our_icon_dir(self):
+        with tempfile.TemporaryDirectory() as d:
+            app = apps.App("no-such-tool-xyz", "X", "", "tools")
+            self.assertIsNone(apps.icon_path(app, d))
+            open(os.path.join(d, "no-such-tool-xyz.png"), "wb").close()
+            self.assertEqual(apps.icon_path(app, d), os.path.join(d, "no-such-tool-xyz.png"))
+
 
 class ReportTests(unittest.TestCase):
     def results(self):

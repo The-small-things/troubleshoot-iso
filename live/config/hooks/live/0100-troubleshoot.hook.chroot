@@ -8,6 +8,9 @@ python3 -m compileall -q /usr/lib/troubleshoot
 # Pre-render the synthesised music and sound effects so the app doesn't have to at start-up.
 PYTHONPATH=/usr/lib/troubleshoot python3 -m troubleshoot.sound /usr/share/troubleshoot/sounds
 
+# PNG icons for apps that only ship an SVG one (Tk can't load SVG), e.g. SuperTux and Disks.
+PYTHONPATH=/usr/lib/troubleshoot python3 -m troubleshoot.apps
+
 # smartd could start its own self-tests in the background; we drive SMART ourselves.
 systemctl disable smartmontools.service 2>/dev/null || true
 systemctl disable smartd.service 2>/dev/null || true

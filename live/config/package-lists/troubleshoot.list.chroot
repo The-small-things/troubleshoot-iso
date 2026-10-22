@@ -25,6 +25,7 @@ fonts-dejavu-core
 fonts-comfortaa
 python3
 python3-tk
+librsvg2-bin
 
 # --- Test tools ----------------------------------------------------------------
 stress-ng

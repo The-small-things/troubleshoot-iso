@@ -11,7 +11,7 @@ terminal-box: "menu_*.png"
     left = 40%
     top = 31%
     width = 56%
-    height = 54%
+    height = 50%
     menu_pixmap_style = "menu_*.png"
     item_font = "DejaVu Sans Regular 16"
     item_color = "#cbd5e1"

@@ -1,0 +1,3 @@
+#!/bin/sh
+# Run the troubleshooter app (graphical if $DISPLAY is set, text mode otherwise).
+PYTHONPATH=/usr/lib/troubleshoot${PYTHONPATH:+:$PYTHONPATH} exec python3 -m troubleshoot "$@"

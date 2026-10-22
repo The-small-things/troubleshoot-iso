@@ -1,0 +1,18 @@
+#!/bin/sh
+# Final tweaks inside the live system's chroot.
+set -e
+
+# The app's Python package is copied in by build.sh; precompile it for faster start-up.
+python3 -m compileall -q /usr/lib/troubleshoot
+
+# smartd could start its own self-tests in the background; we drive SMART ourselves.
+systemctl disable smartmontools.service 2>/dev/null || true
+systemctl disable smartd.service 2>/dev/null || true
+
+# Nothing to do on a diagnostics boot that needs a network login or time sync to wait for.
+systemctl mask systemd-networkd-wait-online.service 2>/dev/null || true
+
+# Larger console font for the text-mode fallback on high-resolution screens.
+sed -i 's/^FONTSIZE=.*/FONTSIZE="12x24"/' /etc/default/console-setup 2>/dev/null || true
+
+chmod 0755 /usr/local/bin/troubleshoot /usr/local/bin/troubleshoot-session /usr/local/lib/troubleshoot/xsession

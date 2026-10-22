@@ -1,0 +1,55 @@
+# --- Live system --------------------------------------------------------------
+live-boot
+live-config
+live-config-systemd
+systemd-sysv
+less
+pciutils
+usbutils
+dmidecode
+iproute2
+kbd
+
+# --- Minimal graphical session (no desktop, no window manager) ---------------
+xserver-xorg-core
+xserver-xorg-video-all
+xserver-xorg-input-libinput
+xinit
+x11-xserver-utils
+libgl1-mesa-dri
+mesa-utils
+fonts-dejavu-core
+python3
+python3-tk
+
+# --- Test tools ----------------------------------------------------------------
+stress-ng
+memtester
+smartmontools
+nvme-cli
+lm-sensors
+iw
+rfkill
+wireless-regdb
+alsa-utils
+bluez
+fswebcam
+v4l-utils
+pipewire
+pipewire-bin
+wireplumber
+ntfs-3g
+exfatprogs
+
+# --- Firmware & microcode (so Wi-Fi, GPUs and sound chips are detected) --------
+firmware-linux-free
+firmware-misc-nonfree
+firmware-amd-graphics
+firmware-realtek
+firmware-iwlwifi
+firmware-atheros
+firmware-brcm80211
+firmware-mediatek
+firmware-sof-signed
+intel-microcode
+amd64-microcode

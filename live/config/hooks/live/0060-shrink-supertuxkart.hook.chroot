@@ -1,0 +1,17 @@
+#!/bin/sh
+# Shrink SuperTuxKart's ~700 MB of data to ~400 MB (textures capped at 512 px, translations and
+# demo replays removed) so the ISO stays under 2 GiB. See /usr/local/lib/troubleshoot/shrink-supertuxkart.py.
+set -e
+DATA=/usr/share/games/supertuxkart/data
+[ -d "$DATA" ] || { echo "shrink-supertuxkart: not installed, nothing to do"; exit 0; }
+
+export DEBIAN_FRONTEND=noninteractive
+had_pil=no
+dpkg -s python3-pil >/dev/null 2>&1 && had_pil=yes
+[ "$had_pil" = yes ] || apt-get install -y -q --no-install-recommends python3-pil
+
+python3 /usr/local/lib/troubleshoot/shrink-supertuxkart.py "$DATA"
+
+# Remove Pillow again only if this hook installed it.
+[ "$had_pil" = yes ] || apt-get purge -y -q --autoremove python3-pil
+apt-get clean

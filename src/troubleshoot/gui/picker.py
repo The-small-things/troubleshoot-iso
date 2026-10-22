@@ -18,7 +18,7 @@ ARCADE = [
     (Game2048, "▣", "#eab308", "Slide and merge the tiles to reach 2048."),
     (Minesweeper, "✹", "#ef4444", "Clear the field without hitting a mine."),
 ]
-CATEGORY_COLORS = {"rescue": "#f59e0b", "games": "#a855f7", "internet": "#3b82f6", "creative": "#ec4899",
+CATEGORY_COLORS = {"rescue": "#f59e0b", "repair": "#ef4444", "games": "#a855f7", "internet": "#3b82f6", "creative": "#ec4899",
                    "tools": "#14b8a6"}
 
 _icon_cache: dict[str, tk.PhotoImage] = {}

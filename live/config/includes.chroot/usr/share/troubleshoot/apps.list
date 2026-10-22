@@ -9,6 +9,13 @@ qphotorec
 gddrescue
 gparted
 
+# Repair & maintenance
+chntpw
+efibootmgr
+os-prober
+clonezilla
+nwipe
+
 # Games
 supertuxkart
 # supertux        (232 MB – left out to stay under 2 GiB; the app shows it automatically if added)

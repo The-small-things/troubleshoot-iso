@@ -53,6 +53,15 @@ CATALOG = [
         guide="/usr/share/troubleshoot/guides/ddrescue.txt"),
     App("gparted", "GParted", "View, resize and repair partitions. Careful: changes made here DO change your "
         "drives.", "rescue"),
+    App("chntpw", "Reset Windows password", "Clear a forgotten password on a local Windows account. Opens a "
+        "terminal with step-by-step instructions.", "repair", terminal=True,
+        guide="/usr/share/troubleshoot/guides/windows-password.txt"),
+    App("efibootmgr", "Boot repair", "Fix \"no bootable device\" and a wrong boot order. Opens a terminal with "
+        "step-by-step instructions.", "repair", terminal=True, guide="/usr/share/troubleshoot/guides/boot-repair.txt"),
+    App("clonezilla", "Clonezilla", "Back up a whole drive to an image, restore it, or clone one drive to another. "
+        "Opens in a terminal.", "repair", terminal=True),
+    App("nwipe", "Securely erase a drive", "Wipe a drive before selling or giving it away. DESTROYS ALL DATA. "
+        "Opens a terminal with instructions.", "repair", terminal=True, guide="/usr/share/troubleshoot/guides/nwipe.txt"),
     App("supertuxkart", "SuperTuxKart", "3D kart racing with Tux and friends. Items, tracks, battle mode.",
         "games", heavy=True),
     App("supertux2", "SuperTux", "Classic side-scrolling platformer starring Tux.", "games"),
@@ -74,7 +83,8 @@ CATALOG = [
         heavy=True),
 ]
 
-CATEGORIES = [("rescue", "Data rescue & recovery"), ("games", "Games"), ("internet", "Internet"),
+CATEGORIES = [("rescue", "Data rescue & recovery"), ("repair", "Repair & maintenance"), ("games", "Games"),
+              ("internet", "Internet"),
               ("creative", "Drawing & painting"), ("tools", "Tools")]
 
 

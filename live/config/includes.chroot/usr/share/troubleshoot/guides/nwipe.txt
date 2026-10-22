@@ -1,0 +1,25 @@
+==========================================================================================
+  SECURELY ERASE A DRIVE with nwipe  –  !! THIS DESTROYS ALL DATA, FOREVER !!
+==========================================================================================
+
+  Use this before selling or giving away a computer or drive. There is NO undo.
+  Make sure you have copies of anything you want to keep.
+
+  - Hard drives (HDD): nwipe works well; one pass ("PRNG Stream" or "Zero Fill") is enough
+    for modern drives.
+  - SSDs: overwriting can't reach every flash cell (spare/remapped areas). For NVMe SSDs
+    prefer the drive's built-in secure erase instead (here the first NVMe drive):
+        nvme format /dev/nvme0n1 --ses=1
+    For SATA SSDs, nwipe is still far better than nothing. Encrypting a drive
+    (BitLocker/LUKS) from day one is the best protection.
+
+  Start it:
+
+         nwipe
+
+  Select drive(s) with the arrow keys and Space, check the method with "m", then start
+  with Shift+S. Double-check the model and size: the USB stick you booted from is listed
+  too.
+
+  Close this window:  exit
+==========================================================================================

@@ -17,8 +17,8 @@ clonezilla
 nwipe
 
 # Games
-supertuxkart
-# supertux        (232 MB – left out to stay under 2 GiB; the app shows it automatically if added)
+supertuxkart     # its textures are shrunk at build time, see hooks/live/0060-shrink-supertuxkart.hook.chroot
+supertux
 extremetuxracer
 neverball
 frozen-bubble
@@ -27,7 +27,7 @@ frozen-bubble
 firefox-esr
 
 # Drawing & painting
-tuxpaint
+tuxpaint         # without its stamp pictures (dpkg path-exclude in the optional-packages hook)
 drawing
 
 # Tools

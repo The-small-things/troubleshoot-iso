@@ -3,6 +3,13 @@
 # break the build. Lists: /usr/share/troubleshoot/{firmware,apps}.list
 set -e
 export DEBIAN_FRONTEND=noninteractive
+
+# Files we never want unpacked (saves space on the ISO, which must stay under 2 GiB):
+# Tux Paint's 10,000+ stamp pictures (~120 MB); the package itself is a hard dependency.
+cat > /etc/dpkg/dpkg.cfg.d/troubleshoot-excludes <<'EXCLUDES'
+path-exclude=/usr/share/tuxpaint/stamps/*
+EXCLUDES
+
 apt-get update -qq
 missing=""
 for list in /usr/share/troubleshoot/firmware.list /usr/share/troubleshoot/apps.list; do

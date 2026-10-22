@@ -23,6 +23,7 @@ sys.path.insert(0, os.path.join(ROOT, "src"))
 from troubleshoot import art  # noqa: E402
 
 BOOT = os.path.join(ROOT, "live", "config", "bootmenu")
+APP_ICONS = os.path.join(ROOT, "live", "config", "includes.chroot", "usr", "share", "troubleshoot", "icons")
 SPLASH = os.path.join(ROOT, "live", "config", "includes.chroot", "usr", "share", "plymouth", "themes", "chip")
 TITLE_FONT = "/usr/share/fonts/truetype/comfortaa/Comfortaa-Bold.ttf"
 BODY_FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
@@ -153,6 +154,74 @@ def icon(name: str, out_dir: str, px: int = 32) -> None:
     img.resize((px, px), Image.LANCZOS).save(os.path.join(out_dir, f"{name}.png"))
 
 
+# Icons for the bundled tools that don't ship one, keyed by command (see troubleshoot.apps.CATALOG).
+# Colours match the category colours on the Games & apps page.
+APP_ICON_COLORS = {"photorec": "#f59e0b", "testdisk": "#f59e0b", "ddrescue": "#f59e0b", "chntpw": "#ef4444",
+                   "efibootmgr": "#ef4444", "clonezilla": "#ef4444", "nwipe": "#ef4444", "glmark2": "#14b8a6",
+                   "pcmanfm": "#14b8a6"}
+
+
+def _drive(d, box, white, lw, S):
+    """A hard drive seen from the front: a slab with a status light."""
+    x0, y0, x1, y1 = box
+    d.rounded_rectangle(box, S * 0.05, outline=white, width=lw)
+    r = (y1 - y0) * 0.14
+    cx, cy = x1 - (y1 - y0) * 0.32, (y0 + y1) / 2
+    d.ellipse((cx - r, cy - r, cx + r, cy + r), fill=white)
+    d.line([(x0 + S * 0.08, cy), (cx - r * 3, cy)], fill=white, width=max(1, lw // 2))
+
+
+def app_icon(name: str, out_dir: str, px: int = 64) -> None:
+    S = px * SS
+    img = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    d.rounded_rectangle((0, 0, S - 1, S - 1), S * 0.22, fill=hexrgb(APP_ICON_COLORS[name]))
+    white = (255, 255, 255)
+    lw = int(S * 0.06)
+    if name == "photorec":  # a photo
+        d.rounded_rectangle((S * 0.16, S * 0.22, S * 0.84, S * 0.74), S * 0.05, outline=white, width=lw)
+        d.polygon([(S * 0.22, S * 0.68), (S * 0.42, S * 0.42), (S * 0.56, S * 0.6), (S * 0.64, S * 0.5),
+                   (S * 0.78, S * 0.68)], fill=white)
+        d.ellipse((S * 0.62, S * 0.3, S * 0.74, S * 0.42), fill=white)
+    elif name == "testdisk":  # a drive under a magnifying glass
+        _drive(d, (S * 0.12, S * 0.5, S * 0.7, S * 0.8), white, lw, S)
+        d.ellipse((S * 0.44, S * 0.14, S * 0.8, S * 0.5), outline=white, width=lw)
+        d.line([(S * 0.76, S * 0.46), (S * 0.9, S * 0.6)], fill=white, width=int(lw * 1.6))
+    elif name == "ddrescue":  # copy from one drive to another
+        _drive(d, (S * 0.12, S * 0.14, S * 0.88, S * 0.38), white, lw, S)
+        _drive(d, (S * 0.12, S * 0.62, S * 0.88, S * 0.86), white, lw, S)
+        d.line([(S / 2, S * 0.4), (S / 2, S * 0.52)], fill=white, width=lw)
+        d.polygon([(S * 0.4, S * 0.5), (S * 0.6, S * 0.5), (S / 2, S * 0.6)], fill=white)
+    elif name == "chntpw":  # a key
+        d.ellipse((S * 0.12, S * 0.3, S * 0.46, S * 0.64), outline=white, width=int(lw * 1.4))
+        d.line([(S * 0.45, S * 0.47), (S * 0.88, S * 0.47)], fill=white, width=int(lw * 1.4))
+        for x in (0.7, 0.82):
+            d.rectangle((S * x, S * 0.47, S * (x + 0.07), S * 0.64), fill=white)
+    elif name == "efibootmgr":  # power symbol
+        d.arc((S * 0.18, S * 0.2, S * 0.82, S * 0.84), -55, 235, fill=white, width=int(lw * 1.4))
+        d.line([(S / 2, S * 0.12), (S / 2, S * 0.5)], fill=white, width=int(lw * 1.4))
+    elif name == "clonezilla":  # two overlapping drives (a copy)
+        _drive(d, (S * 0.1, S * 0.2, S * 0.74, S * 0.48), white, lw, S)
+        d.rounded_rectangle((S * 0.26, S * 0.54, S * 0.9, S * 0.82), S * 0.05, fill=white)
+        d.ellipse((S * 0.72, S * 0.64, S * 0.8, S * 0.72), fill=hexrgb(APP_ICON_COLORS[name]))
+    elif name == "nwipe":  # a drive being erased
+        _drive(d, (S * 0.12, S * 0.18, S * 0.88, S * 0.46), white, lw, S)
+        for i in range(3):
+            y = S * (0.6 + i * 0.1)
+            d.line([(S * (0.2 + i * 0.08), y), (S * (0.8 - i * 0.08), y)], fill=white, width=lw)
+    elif name == "glmark2":  # a 3D cube
+        top = [(S * 0.5, S * 0.14), (S * 0.84, S * 0.32), (S * 0.5, S * 0.5), (S * 0.16, S * 0.32)]
+        d.polygon(top, fill=white)
+        d.polygon([(S * 0.16, S * 0.32), (S * 0.5, S * 0.5), (S * 0.5, S * 0.88), (S * 0.16, S * 0.7)],
+                  outline=white, width=lw)
+        d.polygon([(S * 0.84, S * 0.32), (S * 0.5, S * 0.5), (S * 0.5, S * 0.88), (S * 0.84, S * 0.7)],
+                  outline=white, width=lw)
+    elif name == "pcmanfm":  # a folder
+        d.rounded_rectangle((S * 0.14, S * 0.24, S * 0.48, S * 0.4), S * 0.04, fill=white)
+        d.rounded_rectangle((S * 0.14, S * 0.32, S * 0.86, S * 0.78), S * 0.05, fill=white)
+    img.resize((px, px), Image.LANCZOS).save(os.path.join(out_dir, f"{name}.png"), optimize=True)
+
+
 def grub_fonts(out_dir: str) -> None:
     if not shutil.which("grub-mkfont"):
         sys.exit("grub-mkfont not found: apt-get install grub-common")
@@ -167,7 +236,7 @@ def main() -> None:
     grub_dir = os.path.join(BOOT, "grub", "chip-theme")
     icons_dir = os.path.join(grub_dir, "icons")
     iso_dir = os.path.join(BOOT, "isolinux")
-    for d in (grub_dir, icons_dir, iso_dir, SPLASH):
+    for d in (grub_dir, icons_dir, iso_dir, SPLASH, APP_ICONS):
         os.makedirs(d, exist_ok=True)
 
     background(1024, 768, dict(chip_x=40, chip_y=230, chip=330, text_x=420, title_y=120, title=40,
@@ -183,6 +252,8 @@ def main() -> None:
     nine_slice(os.path.join(grub_dir, "menu"), (30, 41, 59, 200), 16)
     for name in ("chip", "ram", "safe", "memory", "verify", "firmware", "restart", "poweroff"):
         icon(name, icons_dir)
+    for name in APP_ICON_COLORS:
+        app_icon(name, APP_ICONS)
     grub_fonts(grub_dir)
 
     # Plymouth boot splash: Chip with the title underneath, on a transparent background.

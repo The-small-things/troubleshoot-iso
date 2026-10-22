@@ -16,6 +16,8 @@ from dataclasses import dataclass
 
 from . import util
 
+ICON_DIR = "/usr/share/troubleshoot/icons"  # our own icons, and SVG-only ones converted at build time
+
 # Debian puts games in /usr/games, which isn't on root's default PATH.
 SEARCH_PATH = os.pathsep.join([os.environ.get("PATH", "/usr/bin:/bin"), "/usr/games", "/usr/local/games"])
 
@@ -71,7 +73,7 @@ CATALOG = [
     App("frozen-bubble", "Frozen Bubble", "Pop coloured bubbles before they reach the bottom.", "games"),
     App("firefox-esr", "Firefox", "Web browser – look up drivers, manuals and the next steps from your report.",
         "internet"),
-    App("tuxpaint", "Tux Paint", "Fun, easy drawing app with stamps and magic tools.", "creative"),
+    App("tuxpaint", "Tux Paint", "Fun, easy drawing app with brushes, shapes and magic tools.", "creative"),
     App("drawing", "Drawing", "Simple paint app for sketches and editing pictures.", "creative"),
     App("pcmanfm", "Files", "Browse files – e.g. copy photos off an old drive to a USB stick.", "tools"),
     App("mousepad", "Text Editor", "Simple text editor.", "tools"),
@@ -113,12 +115,15 @@ def _desktop_entries() -> dict[str, dict]:
 _ENTRIES: dict[str, dict] | None = None
 
 
-def icon_path(app: App) -> str | None:
-    """A PNG icon for the app (Tk can't load SVG), preferring sizes near 64 px."""
+def icon_name(app: App) -> str:
+    """The icon name from the app's .desktop file (may be an absolute path)."""
     global _ENTRIES
     if _ENTRIES is None:
         _ENTRIES = _desktop_entries()
-    name = _ENTRIES.get(app.command, {}).get("icon", app.command)
+    return _ENTRIES.get(app.command, {}).get("icon", app.command)
+
+
+def _theme_png(name: str) -> str | None:
     if os.path.isabs(name):
         return name if name.endswith(".png") and os.path.exists(name) else None
     for size in ("64x64", "48x48", "128x128", "96x96", "256x256", "512x512", "32x32"):
@@ -128,6 +133,45 @@ def icon_path(app: App) -> str | None:
                 return p
     p = f"/usr/share/pixmaps/{name}.png"
     return p if os.path.exists(p) else None
+
+
+def icon_path(app: App, icon_dir: str = ICON_DIR) -> str | None:
+    """A PNG icon for the app (Tk can't load SVG), preferring sizes near 64 px: the app's own,
+    else one from ``icon_dir`` (drawn for tools that have none, or converted from the app's SVG)."""
+    p = _theme_png(icon_name(app))
+    if p:
+        return p
+    p = os.path.join(icon_dir, f"{app.command}.png")
+    return p if os.path.exists(p) else None
+
+
+def svg_icon(app: App) -> str | None:
+    """The app's scalable (SVG) icon, for converting to PNG when it has no PNG of its own."""
+    name = icon_name(app)
+    if os.path.isabs(name):
+        return name if name.endswith(".svg") and os.path.exists(name) else None
+    for theme in ("hicolor", "Adwaita"):
+        p = f"/usr/share/icons/{theme}/scalable/apps/{name}.svg"
+        if os.path.exists(p):
+            return p
+    return None
+
+
+def convert_svg_icons(icon_dir: str = ICON_DIR, px: int = 64) -> None:
+    """Build-time: render a PNG for each installed app whose icon only exists as SVG."""
+    tool = shutil.which("rsvg-convert")
+    if not tool:
+        print("rsvg-convert not found; apps with only SVG icons get a letter badge")
+        return
+    os.makedirs(icon_dir, exist_ok=True)
+    for app in CATALOG:
+        if not app.installed or icon_path(app, icon_dir):
+            continue
+        svg = svg_icon(app)
+        if svg:
+            out = os.path.join(icon_dir, f"{app.command}.png")
+            ok = subprocess.run([tool, "-w", str(px), "-h", str(px), "-o", out, svg]).returncode == 0
+            print(f"icon for {app.command}: {svg} -> {out}" if ok else f"icon for {app.command}: conversion failed")
 
 
 def command_line(app: App, path: str) -> list[str] | None:
@@ -224,3 +268,7 @@ def wifi_connect(ssid: str, password: str | None) -> tuple[bool, str]:
     res = util.run(cmd, timeout=60)
     msg = (res.stdout + res.stderr).strip().splitlines()
     return res.returncode == 0, (msg[-1] if msg else "")
+
+
+if __name__ == "__main__":
+    convert_svg_icons()

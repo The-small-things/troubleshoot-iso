@@ -114,7 +114,7 @@ class Card(tk.Canvas):
         if command:
             self.bind("<Return>", lambda e: command())
             self.bind("<space>", lambda e: command())
-            self.bind("<FocusIn>", lambda e: self._paint(True, focus=True))
+            self.bind("<FocusIn>", lambda e: (self._paint(True, focus=True), ScrollFrame.reveal(self)))
             self.bind("<FocusOut>", lambda e: self._paint(False))
             self.after_idle(self._bind_children)
 
@@ -174,6 +174,22 @@ class ScrollFrame(tk.Frame):
         for seq, step in (("<Button-4>", -3), ("<Button-5>", 3)):
             self.bind_all(seq, lambda e, s=step: self._scroll(e, s), add="+")
         self.bind_all("<MouseWheel>", lambda e: self._scroll(e, -1 if e.delta > 0 else 1), add="+")
+
+    @staticmethod
+    def reveal(widget) -> None:
+        """Scroll the enclosing ScrollFrame (if any) so ``widget`` is visible."""
+        w = widget.master
+        while w is not None and not isinstance(w, ScrollFrame):
+            w = w.master
+        if w is None:
+            return
+        w.update_idletasks()
+        top = widget.winfo_rooty() - w.inner.winfo_rooty()
+        total = max(1, w.inner.winfo_height())
+        view = w.canvas.winfo_height()
+        first, last = w.canvas.yview()
+        if top < first * total or top + widget.winfo_height() > last * total:
+            w.canvas.yview_moveto(max(0.0, (top - view / 3) / total))
 
     def _scroll(self, event, step):
         if not self.winfo_exists():

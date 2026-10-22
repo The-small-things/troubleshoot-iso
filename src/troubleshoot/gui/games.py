@@ -33,6 +33,7 @@ class Game(tk.Frame):
         self.canvas.bind("<Configure>", lambda e: self.draw())
         self.canvas.bind("<Button-1>", lambda e: self.canvas.focus_set(), add="+")
         self.canvas.bind("<KeyPress>", self.on_key)
+        self.canvas.bind("<Escape>", lambda e: None)  # let Esc through to the app ("back")
         self.after(50, self.canvas.focus_set)
         self.best = 0
 

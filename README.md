@@ -45,6 +45,20 @@ offers the results instead of interrupting you.
 The 3D games are software-rendered on a Tk canvas, so they run in a VM or on hardware without a
 working graphics driver. The stress tests run at low CPU priority so the games stay smooth.
 
+### Music and sound effects
+
+All the music and effects are synthesised in code (`src/troubleshoot/sound.py`), so there are no
+audio files to license. The build pre-renders them to WAV files:
+
+- **Music:** a calm lo-fi loop for the menus and while the automatic tests run, and an upbeat
+  chiptune loop in Chip's games.
+- **Effects:** button clicks, game sounds (eating, merging, pickups, crashes, laps, wins, losses)
+  and a results jingle that matches the verdict.
+- **Silence where it matters:** music and effects are off during the hands-on tests, so they can't
+  interfere with the speaker, microphone or keyboard checks. Music pauses while an open-source app
+  is running, because those games have their own soundtracks.
+- **Mute:** a **♪ Sound on/off** toggle sits in the top-right corner.
+
 ### Open-source games and apps
 
 **Games & apps** (on the welcome screen, or press **G**) also has real open-source software.

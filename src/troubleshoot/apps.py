@@ -106,7 +106,9 @@ def icon_path(app: App) -> str | None:
 
 
 def launch(app: App) -> str | None:
-    """Start the app in the background. Returns an error message, or None on success."""
+    """Start the app in the background. Returns an error message, or None on success.
+    Background music pauses while the app runs (games have their own)."""
+    from . import sound
     path = which(app.command)
     if not path:
         return f"{app.name} isn't installed on this system."
@@ -114,10 +116,12 @@ def launch(app: App) -> str | None:
     env.setdefault("HOME", "/root")
     env["PATH"] = SEARCH_PATH
     try:
-        subprocess.Popen([path, *app.args], env=env, start_new_session=True,
-                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        proc = subprocess.Popen([path, *app.args], env=env, start_new_session=True,
+                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except OSError as e:
         return f"Couldn't start {app.name}: {e}"
+    if sound._player is not None:
+        sound._player.watch(proc)
     return None
 
 

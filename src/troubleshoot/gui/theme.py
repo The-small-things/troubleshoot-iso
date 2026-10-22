@@ -63,7 +63,16 @@ def label(parent, text="", font="body", fg=FG, bg=None, wrap=0, **kw) -> tk.Labe
                     wraplength=wrap, justify="left", anchor="w", **kw)
 
 
+def _with_click(command):
+    def run(*args):
+        from .. import sound
+        sound.sfx("click")
+        return command(*args)
+    return run
+
+
 def button(parent, text, command, kind="primary", font="bold", **kw) -> tk.Button:
+    command = _with_click(command)
     colors = {"primary": (ACCENT, ACCENT_HI, "white"), "secondary": (PANEL_HI, "#475569", FG),
               "good": ("#15803d", GOOD, "white"), "bad": ("#b91c1c", BAD, "white")}[kind]
     b = tk.Button(parent, text=text, command=command, font=FONTS[font], bg=colors[0], fg=colors[2],
@@ -92,7 +101,9 @@ class Card(tk.Canvas):
     def __init__(self, parent, command=None, fill=PANEL, hover=PANEL_HI, radius=None, pad=None):
         super().__init__(parent, bg=parent["bg"], highlightthickness=0, bd=0,
                          takefocus=1 if command else 0, cursor="hand2" if command else "")
-        self.fill, self.hover, self.command = fill, hover, command
+        self.fill, self.hover = fill, hover
+        self.command = _with_click(command) if command else None
+        command = self.command
         self.r = radius if radius is not None else px(0.9)
         self.pad = pad if pad is not None else px(0.9)
         self.shape = None

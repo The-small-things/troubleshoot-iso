@@ -5,6 +5,9 @@ set -e
 # The app's Python package is copied in by build.sh; precompile it for faster start-up.
 python3 -m compileall -q /usr/lib/troubleshoot
 
+# Pre-render the synthesised music and sound effects so the app doesn't have to at start-up.
+PYTHONPATH=/usr/lib/troubleshoot python3 -m troubleshoot.sound /usr/share/troubleshoot/sounds
+
 # smartd could start its own self-tests in the background; we drive SMART ourselves.
 systemctl disable smartmontools.service 2>/dev/null || true
 systemctl disable smartd.service 2>/dev/null || true

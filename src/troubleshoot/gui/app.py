@@ -9,7 +9,7 @@ import time
 import tkinter as tk
 from tkinter import messagebox
 
-from .. import apps, catalog, report, util
+from .. import apps, catalog, report, sound, util
 from ..checks import sysinfo
 from ..model import Context, Result, Status
 from ..runner import run_one
@@ -60,6 +60,11 @@ class App:
             self.root.attributes("-fullscreen", True)
         self.root.protocol("WM_DELETE_WINDOW", lambda: None)  # only our own buttons may close it
         self.page: tk.Frame | None = None
+        self.player = sound.player()
+        self.mute_btn = tk.Button(self.root, font=T.FONTS["small"], command=self.toggle_sound, relief="flat",
+                                  bd=0, bg=T.PANEL_HI, fg=T.FG, activebackground=T.ACCENT, takefocus=0,
+                                  padx=T.px(0.6), pady=T.px(0.2), cursor="hand2")
+        self.update_mute_btn()
         self.info = sysinfo.collect()
         self.welcome()
         marker = os.environ.get("TROUBLESHOOT_STARTED_FILE")
@@ -76,6 +81,24 @@ class App:
             self.root.unbind(f"<KeyPress-{seq}>")
         self.page = frame
         frame.pack(fill="both", expand=True)
+        # Music: none during hands-on tests (they need quiet speakers, mic and keyboard), arcade music
+        # in Chip's games, calm music everywhere else.
+        self.player.quiet = isinstance(frame, tuple(INTERACTIVE_PAGES.values()))
+        if self.player.quiet:
+            self.player.music(None)
+            self.mute_btn.place_forget()
+        else:
+            self.player.music("arcade" if getattr(frame, "is_game", False) else "chill")
+            self.mute_btn.place(relx=1.0, x=-T.px(0.5), y=T.px(0.4), anchor="ne")
+            self.mute_btn.lift()
+
+    def toggle_sound(self):
+        self.player.set_enabled(not self.player.enabled)
+        self.update_mute_btn()
+
+    def update_mute_btn(self):
+        self.mute_btn.configure(text="♪  Sound on" if self.player.enabled else "♪  Sound off",
+                                fg=T.FG if self.player.enabled else T.MUTED)
 
     # --- 1. welcome --------------------------------------------------------------------------
     def welcome(self):
@@ -142,6 +165,7 @@ class App:
         T.button(top, "◀  All games & apps", self.apps_page, "secondary", "small").pack(side="left")
         game = cls(page)
         game.pack(fill="both", expand=True, padx=T.px(1.5), pady=T.px(1))
+        page.is_game = True
         self.show(page)
 
     def power_bar(self, page):
@@ -250,6 +274,10 @@ class App:
     # --- 3. results --------------------------------------------------------------------------
     def results_page(self):
         self.show(ResultsPage(self.root, self))
+        status = report.verdict(self.results)[0]
+        self.player.music(None)
+        sound.sfx({Status.PASS: "result_pass", Status.WARN: "result_warn"}.get(status, "result_fail"))
+        self.root.after(1800, lambda: isinstance(self.page, ResultsPage) and self.player.music("chill"))
 
 
 class RunPage(tk.Frame):
@@ -349,6 +377,7 @@ class RunPage(tk.Frame):
         self.set_skip_keys(False)  # S is a game key (WASD)
         self.game = cls(self.content)
         self.game.pack(fill="both", expand=True)
+        self.app.player.music("arcade")
 
     def launch_app(self, app):
         err = apps.launch(app)
@@ -364,6 +393,7 @@ class RunPage(tk.Frame):
         if self.game is not None:
             self.game.destroy()
             self.game = None
+            self.app.player.music("chill")
 
     def show_log(self):
         self.close_game()

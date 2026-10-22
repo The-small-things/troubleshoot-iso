@@ -14,6 +14,7 @@ import math
 import random
 import time
 
+from ..sound import sfx
 from . import theme as T
 from .games import Game
 
@@ -73,6 +74,7 @@ class Game3D(Game):
         if self.state in ("ready", "over", "won"):
             self.new_game()
             self.state = "running"
+            sfx("start")
 
     def loop(self):
         now = time.monotonic()
@@ -270,9 +272,11 @@ class MazeRunner(Game3D):
             if (chip[0] - self.px) ** 2 + (chip[1] - self.py) ** 2 < 0.16:
                 self.chips.remove(chip)
                 self.got += 1
+                sfx("pickup")
         self.elapsed = time.monotonic() - self.start
         if self.grid[int(self.py)][int(self.px)] == self.EXIT:
             self.state = "won"
+            sfx("win")
             score = self.elapsed - 5 * self.got
             self.best_time = score if self.best_time is None else min(self.best_time, score)
             self.maze_n = min(12, self.maze_n + 1)
@@ -434,8 +438,10 @@ class TurboRoad(Game3D):
             rel = (car["z"] - self.pos) % self.track_len
             if rel > self.track_len / 2 and before < self.track_len / 2:
                 self.passed += 1  # we overtook it
+                sfx("coin")
             if rel < SEG_LEN * 1.2 and abs(car["x"] - self.x) < 0.35 and self.speed > car["speed"]:
                 self.speed = car["speed"] * 0.6  # bump!
+                sfx("bump")
                 self.pos = car["z"] - SEG_LEN * 1.3
         if self.pos >= self.track_len:
             self.pos -= self.track_len
@@ -443,6 +449,7 @@ class TurboRoad(Game3D):
             self.best_lap = lap if self.best_lap is None else min(self.best_lap, lap)
             self.lap_start = time.monotonic()
             self.lap += 1
+            sfx("lap")
         self.lap_time = time.monotonic() - self.lap_start
 
     def project(self, wx, wy, wz, camx, camy, camz, w, h):
@@ -702,6 +709,7 @@ class StarPilot(Game3D):
                     o["hit"] = True
                     if o["gem"]:
                         self.score += 50
+                        sfx("pickup")
                         self.shield = min(100, self.shield + 10)
                     else:
                         self.shield -= 25 * o["r"]
@@ -709,6 +717,9 @@ class StarPilot(Game3D):
                         if self.shield <= 0:
                             self.shield = 0
                             self.state = "over"
+                            sfx("explode")
+                        else:
+                            sfx("bump")
                             self.best_score = max(self.best_score, int(self.score))
                     continue
             if o["z"] > 0.5:

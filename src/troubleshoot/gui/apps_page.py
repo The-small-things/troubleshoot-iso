@@ -20,7 +20,7 @@ class AppsPage(tk.Frame):
         T.button(top, "◀  Back", on_back, "secondary", "small").pack(side="left")
         Mascot(top, T.px(3), "excited").pack(side="left", padx=(T.px(1), T.px(0.5)))
         T.label(top, "Games & apps", "h1").pack(side="left")
-        T.button(top, "Wi-Fi & internet", on_wifi, "secondary", "small").pack(side="right")
+        T.button(top, "Wi-Fi & internet", on_wifi, "secondary", "small").pack(side="right", padx=(0, T.px(7)))
         self.status = T.label(self, "Apps open in their own window – close it (✕ at the top right) to come back "
                                     "here. Nothing you do in these apps affects the test results.",
                               "small", T.MUTED, wrap=T.px(80))
@@ -62,7 +62,7 @@ class WifiPage(tk.Frame):
         T.button(top, "◀  Back", on_back, "secondary", "small").pack(side="left")
         T.label(top, "   Wi-Fi & internet", "h1").pack(side="left")
         self.refresh_btn = T.button(top, "Scan again", self.scan, "secondary", "small")
-        self.refresh_btn.pack(side="right")
+        self.refresh_btn.pack(side="right", padx=(0, T.px(7)))
         self.status = T.label(self, "", "body", T.MUTED, wrap=T.px(70))
         self.status.pack(anchor="w", padx=T.px(1.5))
         if then is not None:

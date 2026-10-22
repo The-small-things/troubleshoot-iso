@@ -84,7 +84,7 @@ def main() -> None:
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
     shots = boot(a.iso, a.out, "uefi", [3, 6, 12, 20, 30, 45, 60, 80, 100, 130])
-    shots += boot(a.iso, a.out, "bios", [3, 6, 30])
+    shots += boot(a.iso, a.out, "bios", [3, 30, 60, 90])
     if a.print_base64:
         for p in shots:
             data = base64.b64encode(open(p, "rb").read()).decode()

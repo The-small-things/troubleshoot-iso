@@ -172,7 +172,7 @@ def main() -> None:
                               tag_y=106, tag=13, pulse_y=430, pulse_h=26,
                               tagline="Hi, I'm Chip! Choose what you'd like to do:")
                ).convert("RGB").save(os.path.join(iso_dir, "splash.png"))
-    nine_slice(os.path.join(grub_dir, "select"), (59, 130, 246, 255), 12)
+    nine_slice(os.path.join(grub_dir, "select"), (59, 130, 246, 255), 6, 24)
     nine_slice(os.path.join(grub_dir, "menu"), (30, 41, 59, 200), 16)
     for name in ("chip", "safe", "memory", "verify", "firmware", "restart", "poweroff"):
         icon(name, icons_dir)

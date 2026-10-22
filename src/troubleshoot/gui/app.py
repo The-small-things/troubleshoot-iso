@@ -118,7 +118,7 @@ class App:
             T.label(head, f"{prof.duration}   [{n}]", "small", T.MUTED, bg=T.PANEL).pack(side="right")
             T.label(text, prof.description, "small", T.MUTED, bg=T.PANEL, wrap=T.px(30)).pack(anchor="w")
         T.label(right, "Press 1–4 or click. Nothing on your disks is ever changed. For a deep memory test, "
-                       "restart and pick \"Memory test\" in the boot menu.", "small", T.MUTED,
+                       "restart and pick \"Deep memory test\" in the boot menu.", "small", T.MUTED,
                 wrap=T.px(36)).pack(anchor="w", pady=(T.px(0.6), 0))
         self.show(page)
         # Bind keys after show() (which clears old bindings).

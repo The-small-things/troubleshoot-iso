@@ -123,6 +123,13 @@ def icon(name: str, out_dir: str, px: int = 32) -> None:
         for i in range(7):
             x = S * (0.1 + i * 0.12)
             d.rectangle((x, S * 0.7, x + S * 0.05, S * 0.8), fill=white)
+    elif name == "ram":  # RAM stick with an arrow into it
+        d.rounded_rectangle((S * 0.04, S * 0.46, S * 0.96, S * 0.78), S * 0.06, outline=white, width=lw)
+        for i in range(7):
+            x = S * (0.1 + i * 0.12)
+            d.rectangle((x, S * 0.82, x + S * 0.05, S * 0.92), fill=white)
+        d.line([(S / 2, S * 0.02), (S / 2, S * 0.32)], fill=white, width=lw)
+        d.polygon([(S * 0.32, S * 0.26), (S * 0.68, S * 0.26), (S / 2, S * 0.42)], fill=white)
     elif name == "verify":
         d.line([(S * 0.18, S * 0.52), (S * 0.42, S * 0.76), (S * 0.84, S * 0.26)], fill=white, width=lw * 2,
                joint="curve")
@@ -174,7 +181,7 @@ def main() -> None:
                ).convert("RGB").save(os.path.join(iso_dir, "splash.png"))
     nine_slice(os.path.join(grub_dir, "select"), (59, 130, 246, 255), 6, 24)
     nine_slice(os.path.join(grub_dir, "menu"), (30, 41, 59, 200), 16)
-    for name in ("chip", "safe", "memory", "verify", "firmware", "restart", "poweroff"):
+    for name in ("chip", "ram", "safe", "memory", "verify", "firmware", "restart", "poweroff"):
         icon(name, icons_dir)
     grub_fonts(grub_dir)
 

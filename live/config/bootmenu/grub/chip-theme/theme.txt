@@ -20,7 +20,7 @@ terminal-box: "menu_*.png"
     selected_item_pixmap_style = "select_*.png"
     item_height = 32
     item_padding = 4
-    item_spacing = 14
+    item_spacing = 10
     icon_width = 28
     icon_height = 28
     item_icon_space = 14

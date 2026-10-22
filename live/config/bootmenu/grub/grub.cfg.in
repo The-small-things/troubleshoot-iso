@@ -6,6 +6,10 @@ menuentry "Start the hardware check-up" --class chip --hotkey=s {
 	linux	/live/vmlinuz @APPEND@ findiso=${iso_path}
 	initrd	/live/initrd.img
 }
+menuentry "Load into RAM, then you can unplug the USB stick" --class ram --hotkey=l {
+	linux	/live/vmlinuz @APPEND@ toram findiso=${iso_path}
+	initrd	/live/initrd.img
+}
 menuentry "Safe mode (use this if the screen stays black)" --class safe --hotkey=f {
 	linux	/live/vmlinuz @APPEND_SAFE@ findiso=${iso_path}
 	initrd	/live/initrd.img

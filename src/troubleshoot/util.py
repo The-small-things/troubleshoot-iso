@@ -104,6 +104,20 @@ def _kill(proc: subprocess.Popen) -> None:
             pass
 
 
+def ram_boot_status() -> str | None:
+    """'ram' if the live system was copied into memory (the USB stick can be unplugged),
+    'fallback' if that was requested but didn't happen (usually not enough RAM), None otherwise."""
+    cmdline = (read(os.path.join(PROC, "cmdline")) or "").split()
+    if "toram" not in cmdline:
+        return None
+    # The system image is a squashfs on a loop device; without toram it's read from the boot
+    # medium's mount (/run/live/medium), with toram from a copy in memory.
+    backing = [read(p) or "" for p in glob.glob(sys_path("block", "loop*", "loop", "backing_file"))]
+    if any("/run/live/medium" in b or "/lib/live/mount/medium" in b for b in backing):
+        return "fallback"
+    return "ram"
+
+
 def meminfo() -> dict[str, int]:
     """/proc/meminfo in kB."""
     out: dict[str, int] = {}

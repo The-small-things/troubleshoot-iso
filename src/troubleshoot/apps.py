@@ -32,13 +32,27 @@ class App:
     category: str         # games | internet | creative | tools
     args: tuple = ()
     heavy: bool = False   # needs real 3D graphics; slow while the CPU stress test runs
+    terminal: bool = False  # text-mode tool: open it in a terminal window
+    guide: str | None = None  # text shown in the terminal first (for tools that need instructions)
+    unless: str | None = None  # hide this entry when that command is installed (a nicer alternative)
 
     @property
     def installed(self) -> bool:
-        return which(self.command) is not None
+        return which(self.command) is not None and not (self.unless and which(self.unless))
 
 
 CATALOG = [
+    App("qphotorec", "PhotoRec", "Recover deleted photos, documents and other files – even from a formatted "
+        "drive or memory card. Saves them to another drive.", "rescue"),
+    App("photorec", "PhotoRec", "Recover deleted photos, documents and other files – even from a formatted "
+        "drive or memory card. Text-mode, opens in a terminal.", "rescue", terminal=True, unless="qphotorec"),
+    App("testdisk", "TestDisk", "Recover lost partitions and make a drive bootable again. Text-mode, opens in a "
+        "terminal.", "rescue", terminal=True),
+    App("ddrescue", "Rescue a failing drive", "Copy a dying drive to a healthy one, skipping bad areas. Opens a "
+        "terminal with step-by-step instructions.", "rescue", terminal=True,
+        guide="/usr/share/troubleshoot/guides/ddrescue.txt"),
+    App("gparted", "GParted", "View, resize and repair partitions. Careful: changes made here DO change your "
+        "drives.", "rescue"),
     App("supertuxkart", "SuperTuxKart", "3D kart racing with Tux and friends. Items, tracks, battle mode.",
         "games", heavy=True),
     App("supertux2", "SuperTux", "Classic side-scrolling platformer starring Tux.", "games"),
@@ -60,7 +74,8 @@ CATALOG = [
         heavy=True),
 ]
 
-CATEGORIES = [("games", "Games"), ("internet", "Internet"), ("creative", "Drawing & painting"), ("tools", "Tools")]
+CATEGORIES = [("rescue", "Data rescue & recovery"), ("games", "Games"), ("internet", "Internet"),
+              ("creative", "Drawing & painting"), ("tools", "Tools")]
 
 
 def installed(category: str | None = None) -> list[App]:
@@ -105,6 +120,23 @@ def icon_path(app: App) -> str | None:
     return p if os.path.exists(p) else None
 
 
+def command_line(app: App, path: str) -> list[str] | None:
+    """The command that starts ``app`` (installed at ``path``); None if it needs a missing terminal."""
+    if not app.terminal:
+        return [path, *app.args]
+    if app.guide:  # show the instructions, then leave the user at a prompt with the tool available
+        script = f"cat {shlex.quote(app.guide)}; echo; exec bash"
+    else:  # run the tool, and don't let the window vanish the moment it exits
+        script = f"{shlex.join([path, *app.args])}; echo; read -r -p 'Press Enter to close this window.' _"
+    term = which("lxterminal")
+    if term:
+        return [term, f"--title={app.name}", f"--command=bash -c {shlex.quote(script)}"]
+    term = which("xterm")
+    if term:
+        return [term, "-T", app.name, "-e", "bash", "-c", script]
+    return None
+
+
 def launch(app: App) -> str | None:
     """Start the app in the background. Returns an error message, or None on success.
     Background music pauses while the app runs (games have their own)."""
@@ -115,8 +147,11 @@ def launch(app: App) -> str | None:
     env = dict(os.environ)
     env.setdefault("HOME", "/root")
     env["PATH"] = SEARCH_PATH
+    cmd = command_line(app, path)
+    if cmd is None:
+        return f"{app.name} needs a terminal window, but no terminal app is installed."
     try:
-        proc = subprocess.Popen([path, *app.args], env=env, start_new_session=True,
+        proc = subprocess.Popen(cmd, env=env, start_new_session=True, cwd=env["HOME"],
                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except OSError as e:
         return f"Couldn't start {app.name}: {e}"

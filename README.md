@@ -66,6 +66,7 @@ These apps open in their own window; close it to return to the troubleshooter.
 
 | | |
 |---|---|
+| Data rescue & recovery | PhotoRec (recover deleted files), TestDisk (lost partitions, boot repair), ddrescue (copy a failing drive, with a step-by-step guide), GParted (partitions; changes your drives) |
 | Games | SuperTuxKart, Extreme Tux Racer, Neverball, Frozen Bubble |
 | Internet | Firefox, plus a built-in **Wi-Fi & internet** screen to get online (Ethernet connects by itself) |
 | Drawing & painting | Tux Paint, Drawing |
@@ -80,8 +81,14 @@ is about 1.9 GB.)
 ### Boot menu and splash
 
 The boot menu (GRUB on UEFI, isolinux on BIOS) shows Chip and plain-language entries: *Start
-the hardware check-up*, *Safe mode*, *Deep memory test*, *Check this USB stick for errors*,
-*BIOS/UEFI settings*, *Restart* and *Power off*. It starts the check-up automatically after
+the hardware check-up*, *Load into RAM*, *Safe mode*, *Deep memory test*, *Check this USB stick
+for errors*, *BIOS/UEFI settings*, *Restart* and *Power off*.
+
+**Load into RAM** copies the whole system (about 2 GB) into memory while it starts. Afterwards
+the welcome screen says *Running from memory*, and you can unplug the USB stick and keep working.
+That takes about 20–40 s longer to start on USB 3, and needs roughly 4 GB of RAM or more. With too
+little RAM it runs from the stick as usual, and the welcome screen tells you to keep the stick
+plugged in. The copy uses about 2 GB of RAM, so the in-session memory test checks less of it. It starts the check-up automatically after
 10 seconds. While Linux loads, a Plymouth splash with Chip replaces the scrolling boot text.
 
 ### Test profiles

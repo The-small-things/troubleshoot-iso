@@ -47,16 +47,3 @@ pipewire-alsa
 wireplumber
 ntfs-3g
 exfatprogs
-
-# --- Firmware & microcode (so Wi-Fi, GPUs and sound chips are detected) --------
-firmware-linux-free
-firmware-misc-nonfree
-firmware-amd-graphics
-firmware-realtek
-firmware-iwlwifi
-firmware-atheros
-firmware-brcm80211
-firmware-mediatek
-firmware-sof-signed
-intel-microcode
-amd64-microcode

@@ -1,0 +1,5 @@
+#!/bin/sh
+# Print the largest installed packages, to help keep the ISO under GitHub's 2 GiB limit.
+echo "===== Largest packages (installed size, MB) ====="
+dpkg-query -W -f='${Installed-Size}\t${Package}\n' | sort -rn | head -40 | awk -F'\t' '{printf "%7.1f  %s\n", $1/1024, $2}'
+echo "===== Total installed: $(dpkg-query -W -f='${Installed-Size}\n' | awk '{s+=$1} END {printf "%.0f MB", s/1024}') ====="

@@ -11,7 +11,7 @@ lb config noauto \
 	--apt-recommends false \
 	--chroot-squashfs-compression-type xz \
 	--firmware-binary false \
-	--firmware-chroot true \
+	--firmware-chroot false \
 	--memtest memtest86+ \
 	--iso-application "Hardware Troubleshooter" \
 	--iso-publisher "troubleshoot-iso" \

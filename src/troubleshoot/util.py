@@ -108,14 +108,16 @@ def ram_boot_status() -> str | None:
     """'ram' if the live system was copied into memory (the USB stick can be unplugged),
     'fallback' if that was requested but didn't happen (usually not enough RAM), None otherwise."""
     cmdline = (read(os.path.join(PROC, "cmdline")) or "").split()
-    if "toram" not in cmdline:
+    if not any(arg == "toram" or arg.startswith("toram=") for arg in cmdline):
         return None
-    # The system image is a squashfs on a loop device; without toram it's read from the boot
-    # medium's mount (/run/live/medium), with toram from a copy in memory.
-    backing = [read(p) or "" for p in glob.glob(sys_path("block", "loop*", "loop", "backing_file"))]
-    if any("/run/live/medium" in b or "/lib/live/mount/medium" in b for b in backing):
-        return "fallback"
-    return "ram"
+    # live-boot's toram copies the boot medium into a RAM disk (tmpfs) and mounts that copy
+    # where the medium was (/run/live/medium). If the medium is still the real USB/CD
+    # filesystem there, the copy didn't happen (usually: not enough memory).
+    for line in (read(os.path.join(PROC, "mounts")) or "").splitlines():
+        parts = line.split()
+        if len(parts) >= 3 and parts[1] in ("/run/live/medium", "/lib/live/mount/medium"):
+            return "ram" if parts[2] in ("tmpfs", "ramfs") else "fallback"
+    return "ram"  # medium not mounted at all: nothing is being read from the stick
 
 
 def meminfo() -> dict[str, int]:

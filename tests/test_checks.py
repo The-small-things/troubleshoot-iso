@@ -341,25 +341,30 @@ class RamBootTests(unittest.TestCase):
         util.SYS, util.PROC = self.old
         self.tmp.cleanup()
 
-    def setup(self, cmdline, backing):
+    def setup(self, cmdline, medium_fstype):
         with open(os.path.join(util.PROC, "cmdline"), "w") as f:
             f.write(cmdline)
-        d = os.path.join(util.SYS, "block", "loop0", "loop")
-        os.makedirs(d)
-        with open(os.path.join(d, "backing_file"), "w") as f:
-            f.write(backing)
+        with open(os.path.join(util.PROC, "mounts"), "w") as f:
+            f.write("proc /proc proc rw 0 0\n")
+            if medium_fstype:
+                f.write(f"/dev/sdb1 /run/live/medium {medium_fstype} ro,noatime 0 0\n")
+            f.write("/dev/loop0 /run/live/rootfs/filesystem.squashfs squashfs ro 0 0\n")
 
     def test_normal_boot(self):
-        self.setup("boot=live quiet", "/run/live/medium/live/filesystem.squashfs")
+        self.setup("boot=live quiet", "iso9660")
         self.assertIsNone(util.ram_boot_status())
 
     def test_loaded_into_ram(self):
-        self.setup("boot=live toram quiet", "/run/live/toram/live/filesystem.squashfs")
+        self.setup("boot=live toram quiet", "tmpfs")
         self.assertEqual(util.ram_boot_status(), "ram")
 
     def test_requested_but_not_enough_memory(self):
-        self.setup("boot=live toram", "/run/live/medium/live/filesystem.squashfs")
+        self.setup("boot=live toram", "iso9660")
         self.assertEqual(util.ram_boot_status(), "fallback")
+
+    def test_medium_unmounted_after_copy(self):
+        self.setup("boot=live toram=filesystem.squashfs", None)
+        self.assertEqual(util.ram_boot_status(), "ram")
 
 
 class TerminalAppTests(unittest.TestCase):

@@ -95,9 +95,10 @@ def main() -> None:
     shots = boot(a.iso, a.out, "uefi", [3, 6, 12, 20, 30, 45, 60, 80, 95], actions={70: "sendkey g"})
     shots += boot(a.iso, a.out, "bios", [3, 30, 60, 90])
     # "Load into RAM" (2nd menu entry): once the app is up, pull out the boot medium and check
-    # the system keeps working.
-    shots += boot(a.iso, a.out, "uefi-toram", [5, 75, 100, 115],
-                  actions={3: "sendkey down", 4: "sendkey ret", 85: "eject -f ide1-cd0", 105: "sendkey g"})
+    # the system keeps working. The GRUB menu appears ~6 s in (after the firmware), so the keys
+    # are sent at 9-10 s; the 8 s shot shows the menu before the selection.
+    shots += boot(a.iso, a.out, "uefi-toram", [8, 11, 90, 110, 125],
+                  actions={9: "sendkey down", 10: "sendkey ret", 95: "eject -f ide1-cd0", 115: "sendkey g"})
     if a.print_base64:
         for p in shots:
             data = base64.b64encode(open(p, "rb").read()).decode()

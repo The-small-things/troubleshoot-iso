@@ -10,7 +10,7 @@ lb config noauto \
 	--debian-installer none \
 	--apt-recommends false \
 	--chroot-squashfs-compression-type xz \
-	--firmware-binary true \
+	--firmware-binary false \
 	--firmware-chroot true \
 	--memtest memtest86+ \
 	--iso-application "Hardware Troubleshooter" \

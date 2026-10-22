@@ -10,7 +10,7 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from troubleshoot import catalog, interactive, report, util  # noqa: E402
+from troubleshoot import apps, catalog, interactive, report, util  # noqa: E402
 from troubleshoot.checks import battery, bluetooth, cpu, kernel_log, memory, storage  # noqa: E402
 from troubleshoot.model import Result, Status  # noqa: E402
 
@@ -248,6 +248,24 @@ class WebcamTests(unittest.TestCase):
         self.assertIs(wr([], None, [], True, None).status, Status.WARN)
         self.assertIs(wr([], None, [], False, None).status, Status.SKIP)
         self.assertIs(wr([], None, [], True, None, mipi=True).status, Status.SKIP)
+
+
+class AppsTests(unittest.TestCase):
+    def test_parse_wifi(self):
+        out = ("*:Home\\:Net:80:WPA2\n"
+               ":Cafe:40:\n"
+               ":Cafe:65:\n"
+               "::30:WPA2\n")
+        nets = apps.parse_wifi(out)
+        self.assertEqual([n["ssid"] for n in nets], ["Home:Net", "Cafe"])  # connected first, hidden dropped
+        self.assertTrue(nets[0]["connected"] and nets[0]["secure"])
+        self.assertEqual(nets[1]["signal"], 65)  # strongest of duplicate access points
+        self.assertFalse(nets[1]["secure"])
+
+    def test_catalog_is_consistent(self):
+        cats = {k for k, _ in apps.CATEGORIES}
+        self.assertTrue(all(a.category in cats for a in apps.CATALOG))
+        self.assertEqual(len({a.command for a in apps.CATALOG}), len(apps.CATALOG))
 
 
 class ReportTests(unittest.TestCase):

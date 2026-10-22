@@ -17,6 +17,7 @@ xserver-xorg-core
 xserver-xorg-video-all
 xserver-xorg-input-libinput
 xinit
+openbox
 x11-xserver-utils
 libgl1-mesa-dri
 mesa-utils
@@ -32,6 +33,7 @@ smartmontools
 nvme-cli
 lm-sensors
 iw
+network-manager
 rfkill
 wireless-regdb
 alsa-utils
@@ -40,6 +42,8 @@ fswebcam
 v4l-utils
 pipewire
 pipewire-bin
+pipewire-pulse
+pipewire-alsa
 wireplumber
 ntfs-3g
 exfatprogs

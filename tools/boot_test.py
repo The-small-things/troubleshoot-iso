@@ -31,7 +31,8 @@ def first(paths):
     raise SystemExit(f"none of {paths} found (install ovmf)")
 
 
-def boot(iso: str, out: str, mode: str, shots: list[int]) -> list[str]:
+def boot(iso: str, out: str, mode: str, shots: list[int], keys: dict[int, str] | None = None) -> list[str]:
+    """Take a screenshot at each time in ``shots`` (seconds); ``keys`` maps a time to a key to press."""
     tmp = tempfile.mkdtemp()
     sock = os.path.join(tmp, "monitor.sock")
     cmd = ["qemu-system-x86_64", "-m", "3072", "-smp", "2", "-vga", "std", "-display", "none",
@@ -57,13 +58,18 @@ def boot(iso: str, out: str, mode: str, shots: list[int]) -> list[str]:
             time.sleep(0.1)
         mon = socket.socket(socket.AF_UNIX)
         mon.connect(sock)
-        for t in shots:
+        events = sorted([(t, "shot") for t in shots] + [(t, "key") for t in (keys or {})])
+        for t, kind in events:
             wait = start + t * scale - time.monotonic()
             if wait > 0:
                 time.sleep(wait)
             if proc.poll() is not None:
                 print(f"[{mode}] QEMU exited early ({proc.returncode})")
                 break
+            if kind == "key":
+                mon.sendall(f"sendkey {keys[t]}\n".encode())
+                print(f"[{mode}] pressed {keys[t]} at {t}s", flush=True)
+                continue
             path = os.path.join(out, f"{mode}-{t:03d}s.png")
             mon.sendall(f"screendump {path} -f png\n".encode())
             time.sleep(1.0)
@@ -83,7 +89,8 @@ def main() -> None:
     ap.add_argument("--print-base64", action="store_true")
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
-    shots = boot(a.iso, a.out, "uefi", [3, 6, 12, 20, 30, 45, 60, 80, 100, 130])
+    # UEFI: menu, splash, welcome screen, then press G to open the Games & apps page.
+    shots = boot(a.iso, a.out, "uefi", [3, 6, 12, 20, 30, 45, 60, 80, 95], keys={70: "g"})
     shots += boot(a.iso, a.out, "bios", [3, 30, 60, 90])
     if a.print_base64:
         for p in shots:

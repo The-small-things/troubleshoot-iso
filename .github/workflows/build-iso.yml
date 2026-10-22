@@ -38,6 +38,14 @@ jobs:
           apt-get install -y --no-install-recommends live-build ca-certificates
       - name: Build ISO
         run: ./build.sh
+      - name: Check ISO size
+        run: |
+          size=$(stat -c %s dist/*.iso)
+          echo "ISO size: $((size / 1024 / 1024)) MiB"
+          if [ "$size" -ge 2147483648 ]; then
+            echo "::error::The ISO is over 2 GiB, GitHub's limit for release files. Trim live/config/includes.chroot/usr/share/troubleshoot/apps.list."
+            exit 1
+          fi
       - name: Upload build log on failure
         if: failure()
         uses: actions/upload-artifact@v4

@@ -9,6 +9,7 @@ lb config noauto \
 	--archive-areas "main contrib non-free non-free-firmware" \
 	--debian-installer none \
 	--apt-recommends false \
+	--chroot-squashfs-compression-type xz \
 	--firmware-binary true \
 	--firmware-chroot true \
 	--memtest memtest86+ \

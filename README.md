@@ -45,6 +45,23 @@ offers the results instead of interrupting you.
 The 3D games are software-rendered on a Tk canvas, so they run in a VM or on hardware without a
 working graphics driver. The stress tests run at low CPU priority so the games stay smooth.
 
+### Open-source games and apps
+
+**Games & apps** (on the welcome screen, or press **G**) also has real open-source software.
+These apps open in their own window; close it to return to the troubleshooter.
+
+| | |
+|---|---|
+| Games | SuperTuxKart, SuperTux, Extreme Tux Racer, Neverball, Frozen Bubble |
+| Internet | Firefox, plus a built-in **Wi-Fi & internet** screen to get online (Ethernet connects by itself) |
+| Drawing & painting | Tux Paint, Drawing |
+| Tools | Files (e.g. copy photos off an old drive), Text Editor, Calculator, Terminal, GNOME Disks, GSmartControl, glmark2 (graphics benchmark) |
+
+The list is in `live/config/includes.chroot/usr/share/troubleshoot/apps.list`. At build time
+each package is installed if Debian has it and skipped otherwise. At runtime the app shows only
+what's installed. CI fails the build if the ISO grows past 2 GiB, GitHub's limit for release
+files.
+
 ### Boot menu and splash
 
 The boot menu (GRUB on UEFI, isolinux on BIOS) shows Chip and plain-language entries: *Start

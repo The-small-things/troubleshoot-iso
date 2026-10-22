@@ -9,11 +9,12 @@ import time
 import tkinter as tk
 from tkinter import messagebox
 
-from .. import catalog, report, util
+from .. import apps, catalog, report, util
 from ..checks import sysinfo
 from ..model import Context, Result, Status
 from ..runner import run_one
 from . import theme as T
+from .apps_page import AppsPage, WifiPage
 from .audio import AudioTest
 from .keyboard import KeyboardTest
 from .mascot import Bubble, Mascot, Pulse
@@ -71,7 +72,7 @@ class App:
     def show(self, frame: tk.Frame):
         if self.page is not None:
             self.page.destroy()
-        for seq in ("1", "2", "3", "4", "s", "S"):
+        for seq in ("1", "2", "3", "4", "s", "S", "g", "G"):
             self.root.unbind(f"<KeyPress-{seq}>")
         self.page = frame
         frame.pack(fill="both", expand=True)
@@ -117,37 +118,30 @@ class App:
                     side="left", padx=T.px(0.6))
             T.label(head, f"{prof.duration}   [{n}]", "small", T.MUTED, bg=T.PANEL).pack(side="right")
             T.label(text, prof.description, "small", T.MUTED, bg=T.PANEL, wrap=T.px(30)).pack(anchor="w")
-        T.label(right, "Press 1–4 or click. Nothing on your disks is ever changed. For a deep memory test, "
+        T.label(right, "Press 1–4 or click (G for games & apps). Nothing on your disks is ever changed. For a deep memory test, "
                        "restart and pick \"Deep memory test\" in the boot menu.", "small", T.MUTED,
                 wrap=T.px(36)).pack(anchor="w", pady=(T.px(0.6), 0))
         self.show(page)
         # Bind keys after show() (which clears old bindings).
         for n, prof in enumerate(catalog.PROFILES.values(), start=1):
             self.root.bind(f"<KeyPress-{n}>", lambda e, p=prof: self.choose(p))
+        for k in ("g", "G"):
+            self.root.bind(f"<KeyPress-{k}>", lambda e: self.apps_page())
 
-    def arcade(self):
-        """Just the games, no testing (from the welcome screen)."""
+    def apps_page(self):
+        """Chip's games plus the bundled open-source games and apps (from the welcome screen)."""
+        self.show(AppsPage(self.root, self.welcome, self.play_builtin, self.wifi_page))
+
+    def wifi_page(self, then=None):
+        self.show(WifiPage(self.root, self.apps_page, then))
+
+    def play_builtin(self, cls):
         page = tk.Frame(self.root, bg=T.BG)
         top = tk.Frame(page, bg=T.BG)
         top.pack(fill="x", padx=T.px(1.5), pady=(T.px(1), 0))
-        T.button(top, "◀  Back", self.welcome, "secondary", "small").pack(side="left")
-        T.label(top, "   Chip's Arcade", "h1").pack(side="left")
-        area = tk.Frame(page, bg=T.BG)
-        area.pack(fill="both", expand=True, padx=T.px(1.5), pady=T.px(1))
-
-        def pick(cls):
-            T.clear(area)
-            back = tk.Frame(area, bg=T.BG)
-            back.pack(fill="x", pady=(0, T.px(0.4)))
-            T.button(back, "◀  All games", lambda: show_picker(), "secondary", "small").pack(side="left")
-            cls(area).pack(fill="both", expand=True)
-
-        def show_picker():
-            T.clear(area)
-            box = tk.Frame(area, bg=T.BG)
-            box.place(relx=0.5, rely=0.45, anchor="center", relwidth=0.8)
-            GamePicker(box, pick).pack(fill="x")
-        show_picker()
+        T.button(top, "◀  All games & apps", self.apps_page, "secondary", "small").pack(side="left")
+        game = cls(page)
+        game.pack(fill="both", expand=True, padx=T.px(1.5), pady=T.px(1))
         self.show(page)
 
     def power_bar(self, page):
@@ -157,7 +151,7 @@ class App:
         T.button(bar, "Restart", lambda: self.power("reboot"), "secondary", "small").pack(
             side="right", padx=T.px(0.6))
         T.button(bar, "Exit to command line", self.quit, "secondary", "small").pack(side="left")
-        T.button(bar, "Chip's Arcade", self.arcade, "secondary", "small").pack(side="left", padx=T.px(0.6))
+        T.button(bar, "Games & apps  (G)", self.apps_page, "primary", "small").pack(side="left", padx=T.px(0.6))
 
     def power(self, action):
         if not messagebox.askyesno("Confirm", "Power off the computer?" if action == "poweroff"
@@ -344,7 +338,7 @@ class RunPage(tk.Frame):
             self.picker = tk.Frame(self.content, bg=T.BG)
             T.label(self.picker, "You can walk away now – or play something while I work:", "small",
                     T.MUTED).pack(anchor="w", pady=(0, T.px(0.3)))
-            GamePicker(self.picker, self.play).pack(fill="x")
+            GamePicker(self.picker, self.play, self.launch_app).pack(fill="x")
         self.picker.pack(fill="both", expand=True)
 
     def play(self, cls):
@@ -355,6 +349,16 @@ class RunPage(tk.Frame):
         self.set_skip_keys(False)  # S is a game key (WASD)
         self.game = cls(self.content)
         self.game.pack(fill="both", expand=True)
+
+    def launch_app(self, app):
+        err = apps.launch(app)
+        if err:
+            self.bubble.set(err)
+        elif app.heavy and getattr(self, "spec", None) is not None and self.spec.test_id == "cpu":
+            self.bubble.set(f"Starting {app.name}! It may be a bit slow while I'm stress-testing the "
+                            "processor – that's normal.")
+        else:
+            self.bubble.set(f"Starting {app.name}! Close its window when you're done; I'll keep testing.")
 
     def close_game(self):
         if self.game is not None:

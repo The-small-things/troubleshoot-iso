@@ -144,3 +144,37 @@ class Card(tk.Canvas):
             for ch in widget.winfo_children():
                 recolor(ch)
         recolor(self.body)
+
+
+class ScrollFrame(tk.Frame):
+    """A vertically scrollable area; put widgets in ``.inner``. Mouse wheel / touchpad scrolling works."""
+
+    def __init__(self, parent):
+        super().__init__(parent, bg=parent["bg"])
+        self.canvas = tk.Canvas(self, bg=parent["bg"], highlightthickness=0)
+        bar = tk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
+        self.canvas.configure(yscrollcommand=bar.set)
+        bar.pack(side="right", fill="y")
+        self.canvas.pack(side="left", fill="both", expand=True)
+        self.inner = tk.Frame(self.canvas, bg=parent["bg"])
+        win = self.canvas.create_window(0, 0, window=self.inner, anchor="nw")
+        self.inner.bind("<Configure>", lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
+        self.canvas.bind("<Configure>", lambda e: self.canvas.itemconfigure(win, width=e.width))
+        for seq, step in (("<Button-4>", -3), ("<Button-5>", 3)):
+            self.bind_all(seq, lambda e, s=step: self._scroll(e, s), add="+")
+        self.bind_all("<MouseWheel>", lambda e: self._scroll(e, -1 if e.delta > 0 else 1), add="+")
+
+    def _scroll(self, event, step):
+        if not self.winfo_exists():
+            return
+        w = event.widget
+        while w is not None:  # only scroll when the pointer is over this area
+            if w is self:
+                self.canvas.yview_scroll(step, "units")
+                return
+            w = getattr(w, "master", None)
+
+    def destroy(self):
+        for seq in ("<Button-4>", "<Button-5>", "<MouseWheel>"):
+            self.unbind_all(seq)
+        super().destroy()

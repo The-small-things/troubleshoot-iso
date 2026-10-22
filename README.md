@@ -52,7 +52,7 @@ These apps open in their own window; close it to return to the troubleshooter.
 
 | | |
 |---|---|
-| Games | SuperTuxKart, SuperTux, Extreme Tux Racer, Neverball, Frozen Bubble |
+| Games | SuperTuxKart, Extreme Tux Racer, Neverball, Frozen Bubble |
 | Internet | Firefox, plus a built-in **Wi-Fi & internet** screen to get online (Ethernet connects by itself) |
 | Drawing & painting | Tux Paint, Drawing |
 | Tools | Files (e.g. copy photos off an old drive), Text Editor, Calculator, Terminal, GNOME Disks, GSmartControl, glmark2 (graphics benchmark) |
@@ -60,7 +60,8 @@ These apps open in their own window; close it to return to the troubleshooter.
 The list is in `live/config/includes.chroot/usr/share/troubleshoot/apps.list`. At build time
 each package is installed if Debian has it and skipped otherwise. At runtime the app shows only
 what's installed. CI fails the build if the ISO grows past 2 GiB, GitHub's limit for release
-files.
+files, and the build log lists the largest packages. (SuperTux is left out for that reason; the ISO
+is about 1.9 GB.)
 
 ### Boot menu and splash
 

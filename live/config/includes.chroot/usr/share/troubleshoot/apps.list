@@ -5,7 +5,7 @@
 
 # Games
 supertuxkart
-supertux
+# supertux        (232 MB – left out to stay under 2 GiB; the app shows it automatically if added)
 extremetuxracer
 neverball
 frozen-bubble

@@ -24,9 +24,9 @@
       <mousebind button="Left" action="Press"><action name="Focus"/><action name="Raise"/></mousebind>
       <mousebind button="Left" action="DoubleClick"><action name="ToggleMaximize"/></mousebind>
     </context>
-    <context name="Frame">
-      <mousebind button="Left" action="Press"><action name="Focus"/><action name="Raise"/></mousebind>
-    </context>
+    <!-- No plain-click bindings in the "Frame" context: it covers the whole window, and Openbox
+         doesn't pass those clicks on to the app (that made every button in the troubleshooter
+         ignore the mouse). "Client" bindings are passed on, so focus-on-click goes there. -->
     <context name="Client">
       <mousebind button="Left" action="Press"><action name="Focus"/><action name="Raise"/></mousebind>
       <mousebind button="Right" action="Press"><action name="Focus"/><action name="Raise"/></mousebind>

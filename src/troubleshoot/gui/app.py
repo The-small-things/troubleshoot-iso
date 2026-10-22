@@ -65,6 +65,10 @@ class App:
                                   bd=0, bg=T.PANEL_HI, fg=T.FG, activebackground=T.ACCENT, takefocus=0,
                                   padx=T.px(0.6), pady=T.px(0.2), cursor="hand2")
         self.update_mute_btn()
+        # Keyboard: arrow keys move between options everywhere, Esc goes back.
+        for seq, step in (("<Down>", 1), ("<Right>", 1), ("<Up>", -1), ("<Left>", -1)):
+            self.root.bind(seq, lambda e, s=step: self.arrow_nav(e, s))
+        self.root.bind("<Escape>", lambda e: self.go_back())
         self.info = sysinfo.collect()
         self.welcome()
         marker = os.environ.get("TROUBLESHOOT_STARTED_FILE")
@@ -92,6 +96,60 @@ class App:
             self.mute_btn.place(relx=1.0, x=-T.px(0.5), y=T.px(0.4), anchor="ne")
             self.mute_btn.lift()
 
+        self.root.after_idle(self.focus_initial)
+
+    # --- keyboard navigation -----------------------------------------------------------------
+    def arrow_nav(self, event, step):
+        w = event.widget
+        # Text boxes use the arrows for the cursor; games and the hands-on tests use them too.
+        if isinstance(w, (tk.Entry, tk.Text, tk.Spinbox)) or (isinstance(w, tk.Canvas) and not isinstance(w, T.Card)):
+            return None
+        if isinstance(self.page, tuple(INTERACTIVE_PAGES.values())):
+            return None
+        target = w.tk_focusNext() if step > 0 else w.tk_focusPrev()
+        if target is not None:
+            target.focus_set()
+        return "break"
+
+    def go_back(self):
+        back = getattr(self.page, "back", None)
+        if back is not None:
+            back()
+
+    def focus_initial(self):
+        """Give each page a sensible starting point for the keyboard (unless it chose one itself)."""
+        page = self.page
+        if page is None or not page.winfo_exists() or isinstance(page, tuple(INTERACTIVE_PAGES.values())):
+            return
+        # focus_lastfor() includes focus a page requested that Tk hasn't applied yet.
+        current = self.root.focus_lastfor()
+        if current is not None and current is not page and str(current).startswith(str(page) + "."):
+            return
+        target = getattr(page, "initial_focus", None) or self._first_card(page) or self._first_focusable(page)
+        if target is not None and target.winfo_exists():
+            target.focus_set()
+
+    @staticmethod
+    def _first_focusable(page):
+        w = page.tk_focusNext()
+        for _ in range(200):
+            if w is None:
+                return None
+            if w is not page and str(w).startswith(str(page) + "."):
+                return w
+            w = w.tk_focusNext()
+        return None
+
+    @staticmethod
+    def _first_card(widget):
+        for child in widget.winfo_children():
+            if isinstance(child, T.Card) and child.command is not None:
+                return child
+            found = App._first_card(child)
+            if found is not None:
+                return found
+        return None
+
     def toggle_sound(self):
         self.player.set_enabled(not self.player.enabled)
         self.update_mute_btn()
@@ -103,7 +161,6 @@ class App:
     # --- 1. welcome --------------------------------------------------------------------------
     def welcome(self):
         page = tk.Frame(self.root, bg=T.BG)
-        self.power_bar(page)
         Pulse(page, T.px(2.2)).pack(side="top", fill="x", pady=(T.px(1), 0))
         inner = tk.Frame(page, bg=T.BG)
         inner.place(relx=0.5, rely=0.5, anchor="center")
@@ -124,6 +181,8 @@ class App:
             icon, color = T.PROFILE_STYLE[prof.key]
             card = T.Card(right, command=lambda p=prof: self.choose(p))
             card.pack(fill="x", pady=T.px(0.3))
+            if prof.key == "standard":
+                page.initial_focus = card
             card.configure(width=T.px(36))
             row = tk.Frame(card.body, bg=T.PANEL)
             row.pack(fill="x")
@@ -144,6 +203,7 @@ class App:
         T.label(right, "Press 1–4 or click (G for games & apps). Nothing on your disks is ever changed. For a deep memory test, "
                        "restart and pick \"Deep memory test\" in the boot menu.", "small", T.MUTED,
                 wrap=T.px(36)).pack(anchor="w", pady=(T.px(0.6), 0))
+        self.power_bar(page)  # created last so Tab reaches it after the main options
         self.show(page)
         # Bind keys after show() (which clears old bindings).
         for n, prof in enumerate(catalog.PROFILES.values(), start=1):
@@ -153,10 +213,14 @@ class App:
 
     def apps_page(self):
         """Chip's games plus the bundled open-source games and apps (from the welcome screen)."""
-        self.show(AppsPage(self.root, self.welcome, self.play_builtin, self.wifi_page))
+        page = AppsPage(self.root, self.welcome, self.play_builtin, self.wifi_page)
+        page.back = self.welcome
+        self.show(page)
 
     def wifi_page(self, then=None):
-        self.show(WifiPage(self.root, self.apps_page, then))
+        page = WifiPage(self.root, self.apps_page, then)
+        page.back = self.apps_page
+        self.show(page)
 
     def play_builtin(self, cls):
         page = tk.Frame(self.root, bg=T.BG)
@@ -166,6 +230,7 @@ class App:
         game = cls(page)
         game.pack(fill="both", expand=True, padx=T.px(1.5), pady=T.px(1))
         page.is_game = True
+        page.back = self.apps_page
         self.show(page)
 
     def power_bar(self, page):
@@ -197,6 +262,7 @@ class App:
     # --- 1b. custom selection ----------------------------------------------------------------
     def custom(self, prof):
         page = tk.Frame(self.root, bg=T.BG)
+        page.back = self.welcome
         inner = tk.Frame(page, bg=T.BG)
         inner.place(relx=0.5, rely=0.5, anchor="center")
         T.label(inner, "Choose tests", "h1").pack(anchor="w", pady=(0, T.px(1)))
@@ -343,6 +409,7 @@ class RunPage(tk.Frame):
                            highlightthickness=0, wrap="none", state="disabled")
         self.picker = None
         self.game = None
+        self.back = self.show_games  # Esc leaves a game and returns to the game list
         self.show_games()
         self.frac: float | None = 0.0
         self.after(100, self.poll)
@@ -554,14 +621,14 @@ class ResultsPage(tk.Frame):
             self.text.tag_configure(s.value, foreground=col, font=T.FONTS["bold"])
         self.sel = 0
         self.select(0)
-        self.bind_all("<Up>", lambda e: self.select(max(0, self.sel - 1)))
-        self.bind_all("<Down>", lambda e: self.select(min(len(self.items) - 1, self.sel + 1)))
-        self.bind("<Destroy>", lambda e: (self.unbind_all("<Up>"), self.unbind_all("<Down>")) if e.widget is self else None)
+        self.initial_focus = self.items[0][0]
 
     def add_item(self, parent, result, text, color, icon):
         i = len(self.items)
-        row = tk.Frame(parent, bg=T.BG, cursor="hand2")
+        row = tk.Frame(parent, bg=T.BG, cursor="hand2", takefocus=1, highlightthickness=2,
+                       highlightcolor="white", highlightbackground=T.BG)
         row.pack(fill="x", pady=1)
+        row.bind("<FocusIn>", lambda e, i=i: self.select(i))  # arrows/Tab move through the results
         a = T.label(row, icon, "bold", color, width=2)
         a.pack(side="left")
         b = T.label(row, text, "body")

@@ -38,6 +38,14 @@ jobs:
           apt-get install -y --no-install-recommends live-build ca-certificates
       - name: Build ISO
         run: ./build.sh
+      - name: Check ISO size
+        run: |
+          size=$(stat -c %s dist/*.iso)
+          echo "ISO size: $((size / 1024 / 1024)) MiB"
+          if [ "$size" -ge 2147483648 ]; then
+            echo "::error::The ISO is over 2 GiB, GitHub's limit for release files. Trim live/config/includes.chroot/usr/share/troubleshoot/apps.list."
+            exit 1
+          fi
       - name: Upload build log on failure
         if: failure()
         uses: actions/upload-artifact@v4
@@ -55,3 +63,28 @@ jobs:
         with:
           tag_name: ${{ github.event.release.tag_name }}
           files: dist/*
+
+  boot-test:
+    # Boot the new ISO in QEMU (UEFI + BIOS) and screenshot the boot menu, splash and app.
+    needs: iso
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: troubleshoot-iso
+          path: dist
+      - name: Install QEMU and enable KVM
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends qemu-system-x86 ovmf
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm || true
+      - name: Boot and take screenshots
+        run: python3 tools/boot_test.py dist/*.iso screenshots --print-base64
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: boot-screenshots
+          path: screenshots/

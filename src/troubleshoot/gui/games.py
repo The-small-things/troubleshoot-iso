@@ -9,6 +9,7 @@ from __future__ import annotations
 import random
 import tkinter as tk
 
+from ..sound import sfx
 from . import theme as T
 
 ARROWS = {"Up": (0, -1), "Down": (0, 1), "Left": (-1, 0), "Right": (1, 0),
@@ -100,6 +101,8 @@ class Snake(Game):
         return "break"
 
     def start(self):
+        if self.state != "paused":
+            sfx("start")
         self.state = "running"
         if self.job is None:
             self.tick()
@@ -113,10 +116,12 @@ class Snake(Game):
         head = (hx + self.dir[0], hy + self.dir[1])
         if not (0 <= head[0] < self.COLS and 0 <= head[1] < self.ROWS) or head in self.body[:-1]:
             self.state = "over"
+            sfx("lose")
             self.draw()
             return
         self.body.insert(0, head)
         if head == self.food:
+            sfx("coin")
             self.score += 1
             self.set_score(self.score)
             self.place_food()
@@ -224,10 +229,19 @@ class Game2048(Game):
                 else:
                     new[n - 1 - j][i] = v
         if new != g:
+            had_2048 = any(2048 in row for row in g)
             self.grid = new
             self.score += gained
             self.set_score(self.score)
             self.spawn()
+            if not had_2048 and any(2048 in row for row in new):
+                sfx("win")
+            elif not self.can_move():
+                sfx("lose")
+            elif gained:
+                sfx("merge")
+            else:
+                sfx("tick")
         self.draw()
 
     def can_move(self):
@@ -328,10 +342,14 @@ class Minesweeper(Game):
             self.state = "playing"
         if cell in self.mines:
             self.state = "lost"
+            sfx("explode")
         else:
             self.flood(cell)
             if len(self.open) == self.ROWS * self.COLS - self.MINES:
                 self.state = "won"
+                sfx("win")
+            else:
+                sfx("tick")
         self.set_score(len(self.open))
         self.draw()
 
@@ -349,6 +367,7 @@ class Minesweeper(Game):
         cell = self.cell_at(e)
         if self.state == "playing" and cell and cell not in self.open:
             self.flags ^= {cell}
+            sfx("flag")
             self.draw()
 
     def on_key(self, e):

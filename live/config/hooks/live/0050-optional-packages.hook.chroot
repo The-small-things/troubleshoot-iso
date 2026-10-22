@@ -1,0 +1,19 @@
+#!/bin/sh
+# Install firmware and the optional apps one by one, so a missing or renamed package can't
+# break the build. Lists: /usr/share/troubleshoot/{firmware,apps}.list
+set -e
+export DEBIAN_FRONTEND=noninteractive
+apt-get update -qq
+missing=""
+for list in /usr/share/troubleshoot/firmware.list /usr/share/troubleshoot/apps.list; do
+	for pkg in $(sed -e 's/#.*//' "$list"); do
+		if apt-get install -y -q --no-install-recommends "$pkg"; then
+			echo "optional packages: installed $pkg"
+		else
+			echo "optional packages: WARNING: could not install $pkg, skipping"
+			missing="$missing $pkg"
+		fi
+	done
+done
+apt-get clean
+echo "optional packages: done.${missing:+ Skipped:$missing}"

@@ -1,0 +1,30 @@
+[Plymouth Theme]
+Name=Chip
+Description=Hardware Troubleshooter boot splash: Chip the robot and a spinner
+ModuleName=two-step
+
+[two-step]
+ImageDir=/usr/share/plymouth/themes/chip
+HorizontalAlignment=.5
+VerticalAlignment=.78
+WatermarkHorizontalAlignment=.5
+WatermarkVerticalAlignment=.40
+DialogHorizontalAlignment=.5
+DialogVerticalAlignment=.70
+Transition=none
+TransitionDuration=0.0
+BackgroundStartColor=0x0f172a
+BackgroundEndColor=0x1e1b4b
+MessageBelowAnimation=true
+
+[boot-up]
+UseEndAnimation=false
+UseFirmwareBackground=false
+
+[shutdown]
+UseEndAnimation=false
+UseFirmwareBackground=false
+
+[reboot]
+UseEndAnimation=false
+UseFirmwareBackground=false

@@ -9,16 +9,20 @@ usbutils
 dmidecode
 iproute2
 kbd
+plymouth
+plymouth-themes
 
 # --- Minimal graphical session (no desktop, no window manager) ---------------
 xserver-xorg-core
 xserver-xorg-video-all
 xserver-xorg-input-libinput
 xinit
+openbox
 x11-xserver-utils
 libgl1-mesa-dri
 mesa-utils
 fonts-dejavu-core
+fonts-comfortaa
 python3
 python3-tk
 
@@ -29,6 +33,7 @@ smartmontools
 nvme-cli
 lm-sensors
 iw
+network-manager
 rfkill
 wireless-regdb
 alsa-utils
@@ -37,19 +42,8 @@ fswebcam
 v4l-utils
 pipewire
 pipewire-bin
+pipewire-pulse
+pipewire-alsa
 wireplumber
 ntfs-3g
 exfatprogs
-
-# --- Firmware & microcode (so Wi-Fi, GPUs and sound chips are detected) --------
-firmware-linux-free
-firmware-misc-nonfree
-firmware-amd-graphics
-firmware-realtek
-firmware-iwlwifi
-firmware-atheros
-firmware-brcm80211
-firmware-mediatek
-firmware-sof-signed
-intel-microcode
-amd64-microcode

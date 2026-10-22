@@ -9,20 +9,42 @@ import time
 import tkinter as tk
 from tkinter import messagebox
 
-from .. import catalog, report, util
+from .. import apps, catalog, report, sound, util
 from ..checks import sysinfo
 from ..model import Context, Result, Status
 from ..runner import run_one
 from . import theme as T
+from .apps_page import AppsPage, WifiPage
 from .audio import AudioTest
-from .games import GAMES
 from .keyboard import KeyboardTest
+from .mascot import Bubble, Mascot, Pulse
+from .picker import GamePicker
 from .pointer import PointerTest
 from .screen import ScreenTest
 from .webcam import WebcamTest
 
 INTERACTIVE_PAGES = {"screen": ScreenTest, "keyboard": KeyboardTest, "pointer": PointerTest,
                      "webcam": WebcamTest, "audio": AudioTest}
+
+# What Chip says while each automatic test runs.
+CHATTER = {
+    "sysinfo": "Getting to know this computer…",
+    "graphics": "Checking the graphics chip has a proper driver…",
+    "battery": "Checking how healthy the battery is…",
+    "network": "Listening for Wi-Fi networks…",
+    "bluetooth": "Saying hello to Bluetooth gadgets nearby…",
+    "storage": "Reading the drives' health diaries. I only read – I never change anything!",
+    "memory": "Writing patterns into the memory and checking every one comes back the same…",
+    "cpu": "Giving the processor a proper workout. It's supposed to get warm and loud!",
+    "kernel_log": "Checking whether any hardware complained while I was testing…",
+}
+
+VERDICT_FACE = {Status.PASS: "excited", Status.WARN: "thinking", Status.FAIL: "worried"}
+VERDICT_LINE = {
+    Status.PASS: "Great news – everything I tested looks healthy!",
+    Status.WARN: "Mostly good! A few things could use some attention.",
+    Status.FAIL: "I found some problems. Don't worry – I'll explain each one and what to do.",
+}
 
 
 class App:
@@ -38,6 +60,11 @@ class App:
             self.root.attributes("-fullscreen", True)
         self.root.protocol("WM_DELETE_WINDOW", lambda: None)  # only our own buttons may close it
         self.page: tk.Frame | None = None
+        self.player = sound.player()
+        self.mute_btn = tk.Button(self.root, font=T.FONTS["small"], command=self.toggle_sound, relief="flat",
+                                  bd=0, bg=T.PANEL_HI, fg=T.FG, activebackground=T.ACCENT, takefocus=0,
+                                  padx=T.px(0.6), pady=T.px(0.2), cursor="hand2")
+        self.update_mute_btn()
         self.info = sysinfo.collect()
         self.welcome()
         marker = os.environ.get("TROUBLESHOOT_STARTED_FILE")
@@ -50,49 +77,96 @@ class App:
     def show(self, frame: tk.Frame):
         if self.page is not None:
             self.page.destroy()
-        for seq in ("1", "2", "3", "4", "s", "S"):
+        for seq in ("1", "2", "3", "4", "s", "S", "g", "G"):
             self.root.unbind(f"<KeyPress-{seq}>")
         self.page = frame
         frame.pack(fill="both", expand=True)
+        # Music: none during hands-on tests (they need quiet speakers, mic and keyboard), arcade music
+        # in Chip's games, calm music everywhere else.
+        self.player.quiet = isinstance(frame, tuple(INTERACTIVE_PAGES.values()))
+        if self.player.quiet:
+            self.player.music(None)
+            self.mute_btn.place_forget()
+        else:
+            self.player.music("arcade" if getattr(frame, "is_game", False) else "chill")
+            self.mute_btn.place(relx=1.0, x=-T.px(0.5), y=T.px(0.4), anchor="ne")
+            self.mute_btn.lift()
+
+    def toggle_sound(self):
+        self.player.set_enabled(not self.player.enabled)
+        self.update_mute_btn()
+
+    def update_mute_btn(self):
+        self.mute_btn.configure(text="♪  Sound on" if self.player.enabled else "♪  Sound off",
+                                fg=T.FG if self.player.enabled else T.MUTED)
 
     # --- 1. welcome --------------------------------------------------------------------------
     def welcome(self):
         page = tk.Frame(self.root, bg=T.BG)
+        self.power_bar(page)
+        Pulse(page, T.px(2.2)).pack(side="top", fill="x", pady=(T.px(1), 0))
         inner = tk.Frame(page, bg=T.BG)
         inner.place(relx=0.5, rely=0.5, anchor="center")
-        T.label(inner, "Hardware Troubleshooter", "huge").pack(anchor="w")
-        T.label(inner, f"{self.info['vendor']} {self.info['product']}  ·  {self.info['cpu']}  ·  "
-                       f"{self.info['ram_total']} RAM", fg=T.MUTED).pack(anchor="w", pady=(0, T.px(1.5)))
-        T.label(inner, "Choose how thorough the test should be:", "h2").pack(anchor="w", pady=(0, T.px(0.6)))
 
+        left = tk.Frame(inner, bg=T.BG)
+        left.pack(side="left", anchor="n", padx=(0, T.px(2.5)))
+        Mascot(left, T.px(12), "happy").pack(anchor="w")
+        Bubble(left, "Hi, I'm Chip! I'll give this computer a full check-up and explain "
+                     "everything I find in plain words.\n\nHow thorough should I be?",
+               wrap=T.px(15), tail="top").pack(anchor="w", pady=(T.px(0.5), 0))
+
+        right = tk.Frame(inner, bg=T.BG)
+        right.pack(side="left", anchor="n")
+        T.label(right, "Hardware Troubleshooter", "huge").pack(anchor="w")
+        T.label(right, f"{self.info['vendor']} {self.info['product']}  ·  {self.info['cpu']}  ·  "
+                       f"{self.info['ram_total']} RAM", fg=T.MUTED, wrap=T.px(44)).pack(anchor="w", pady=(0, T.px(1.2)))
         for n, prof in enumerate(catalog.PROFILES.values(), start=1):
-            card = tk.Frame(inner, bg=T.PANEL, highlightthickness=T.px(0.15), highlightbackground=T.PANEL,
-                            highlightcolor="white", takefocus=1, cursor="hand2")
-            card.pack(fill="x", pady=T.px(0.35))
-            head = tk.Frame(card, bg=T.PANEL)
-            head.pack(fill="x", padx=T.px(1), pady=(T.px(0.6), 0))
-            T.label(head, f"{n}", "h2", T.ACCENT_HI).pack(side="left", padx=(0, T.px(0.8)))
-            T.label(head, prof.title, "h2").pack(side="left")
-            T.label(head, prof.duration, "body", T.MUTED).pack(side="right")
-            T.label(card, prof.description, "body", T.MUTED, wrap=T.px(50)).pack(
-                anchor="w", padx=(T.px(2.6), T.px(1)), pady=(0, T.px(0.6)))
-            choose = lambda e=None, p=prof: self.choose(p)  # noqa: E731
-            for w in (card, head, *head.winfo_children(), *card.winfo_children()):
-                w.bind("<Button-1>", choose)
-            card.bind("<Return>", choose)
-            card.bind("<space>", choose)
-            card.bind("<FocusIn>", lambda e, c=card: c.configure(highlightbackground=T.ACCENT))
-            card.bind("<FocusOut>", lambda e, c=card: c.configure(highlightbackground=T.PANEL))
-
-        T.label(inner, "Press 1–4 or click an option. Nothing on your disks is changed by any test.",
-                "small", T.MUTED).pack(anchor="w", pady=(T.px(0.6), 0))
-        T.label(inner, "For an in-depth memory test, restart and choose \"Memory test (memtest86+)\" in "
-                       "the boot menu.", "small", T.MUTED).pack(anchor="w")
-        self.power_bar(page)
+            icon, color = T.PROFILE_STYLE[prof.key]
+            card = T.Card(right, command=lambda p=prof: self.choose(p))
+            card.pack(fill="x", pady=T.px(0.3))
+            card.configure(width=T.px(36))
+            row = tk.Frame(card.body, bg=T.PANEL)
+            row.pack(fill="x")
+            badge = tk.Canvas(row, width=T.px(2.6), height=T.px(2.6), bg=T.PANEL, highlightthickness=0)
+            T.rounded(badge, 0, 0, T.px(2.6), T.px(2.6), T.px(0.7), fill=color, outline="")
+            badge.create_text(T.px(1.3), T.px(1.3), text=icon, fill="white", font=T.FONTS["icon"])
+            badge.pack(side="left", anchor="n", padx=(0, T.px(0.9)))
+            text = tk.Frame(row, bg=T.PANEL)
+            text.pack(side="left", fill="x", expand=True)
+            head = tk.Frame(text, bg=T.PANEL)
+            head.pack(fill="x")
+            T.label(head, f"{prof.title}", "h2", bg=T.PANEL).pack(side="left")
+            if prof.key == "standard":
+                tk.Label(head, text=" Recommended ", font=T.FONTS["small"], bg=color, fg="white").pack(
+                    side="left", padx=T.px(0.6))
+            T.label(head, f"{prof.duration}   [{n}]", "small", T.MUTED, bg=T.PANEL).pack(side="right")
+            T.label(text, prof.description, "small", T.MUTED, bg=T.PANEL, wrap=T.px(30)).pack(anchor="w")
+        T.label(right, "Press 1–4 or click (G for games & apps). Nothing on your disks is ever changed. For a deep memory test, "
+                       "restart and pick \"Deep memory test\" in the boot menu.", "small", T.MUTED,
+                wrap=T.px(36)).pack(anchor="w", pady=(T.px(0.6), 0))
         self.show(page)
         # Bind keys after show() (which clears old bindings).
         for n, prof in enumerate(catalog.PROFILES.values(), start=1):
             self.root.bind(f"<KeyPress-{n}>", lambda e, p=prof: self.choose(p))
+        for k in ("g", "G"):
+            self.root.bind(f"<KeyPress-{k}>", lambda e: self.apps_page())
+
+    def apps_page(self):
+        """Chip's games plus the bundled open-source games and apps (from the welcome screen)."""
+        self.show(AppsPage(self.root, self.welcome, self.play_builtin, self.wifi_page))
+
+    def wifi_page(self, then=None):
+        self.show(WifiPage(self.root, self.apps_page, then))
+
+    def play_builtin(self, cls):
+        page = tk.Frame(self.root, bg=T.BG)
+        top = tk.Frame(page, bg=T.BG)
+        top.pack(fill="x", padx=T.px(1.5), pady=(T.px(1), 0))
+        T.button(top, "◀  All games & apps", self.apps_page, "secondary", "small").pack(side="left")
+        game = cls(page)
+        game.pack(fill="both", expand=True, padx=T.px(1.5), pady=T.px(1))
+        page.is_game = True
+        self.show(page)
 
     def power_bar(self, page):
         bar = tk.Frame(page, bg=T.BG)
@@ -101,6 +175,7 @@ class App:
         T.button(bar, "Restart", lambda: self.power("reboot"), "secondary", "small").pack(
             side="right", padx=T.px(0.6))
         T.button(bar, "Exit to command line", self.quit, "secondary", "small").pack(side="left")
+        T.button(bar, "Games & apps  (G)", self.apps_page, "primary", "small").pack(side="left", padx=T.px(0.6))
 
     def power(self, action):
         if not messagebox.askyesno("Confirm", "Power off the computer?" if action == "poweroff"
@@ -161,13 +236,16 @@ class App:
         page = tk.Frame(self.root, bg=T.BG)
         inner = tk.Frame(page, bg=T.BG)
         inner.place(relx=0.5, rely=0.5, anchor="center")
-        names = [spec.name for spec, _ in self.plan if spec.interactive]
-        T.label(inner, "Part 1: hands-on tests", "h1").pack(anchor="w")
-        T.label(inner, "Please stay with the computer for a few minutes – you'll check the "
-                       + ", ".join(n.lower() for n in names) + ".\n\nAfter that, the automatic tests run "
-                       "on their own and you can walk away. For laptops, keep the charger plugged in.",
-                wrap=T.px(45)).pack(anchor="w", pady=T.px(1))
-        b = T.button(inner, "Begin  (Enter)", self.next)
+        names = [spec.name.lower() for spec, _ in self.plan if spec.interactive]
+        Mascot(inner, T.px(9), "excited").pack(side="left", anchor="n", padx=(0, T.px(1.5)))
+        col = tk.Frame(inner, bg=T.BG)
+        col.pack(side="left")
+        T.label(col, "Part 1: let's do this together", "h1").pack(anchor="w")
+        Bubble(col, "First I need your eyes, ears and fingers for a few minutes – we'll check the "
+                    + ", ".join(names) + ".\n\nAfter that I'll run the automatic tests on my own, and you "
+                    "can walk away (or play a game). Laptops: please keep the charger plugged in.",
+               wrap=T.px(30)).pack(anchor="w", pady=T.px(1))
+        b = T.button(col, "Let's go!  (Enter)", self.next)
         b.pack(anchor="w")
         self.show(page)
         b.focus_set()
@@ -196,6 +274,10 @@ class App:
     # --- 3. results --------------------------------------------------------------------------
     def results_page(self):
         self.show(ResultsPage(self.root, self))
+        status = report.verdict(self.results)[0]
+        self.player.music(None)
+        sound.sfx({Status.PASS: "result_pass", Status.WARN: "result_warn"}.get(status, "result_fail"))
+        self.root.after(1800, lambda: isinstance(self.page, ResultsPage) and self.player.music("chill"))
 
 
 class RunPage(tk.Frame):
@@ -211,7 +293,11 @@ class RunPage(tk.Frame):
         left = tk.Frame(self, bg=T.PANEL, width=T.px(20))
         left.pack(side="left", fill="y")
         left.pack_propagate(False)
-        T.label(left, "Tests", "h2", bg=T.PANEL).pack(anchor="w", padx=T.px(1), pady=T.px(1))
+        self.chip = Mascot(left, T.px(7), "thinking", bg=T.PANEL)
+        self.chip.pack(anchor="w", padx=T.px(1), pady=(T.px(1), 0))
+        self.bubble = Bubble(left, "", wrap=T.px(15), font="small", fill=T.BG)
+        self.bubble.pack(anchor="w", padx=T.px(0.6), pady=(T.px(0.4), T.px(0.8)))
+        T.label(left, "Tests", "bold", T.MUTED, bg=T.PANEL).pack(anchor="w", padx=T.px(1))
         self.rows: dict[str, tuple[tk.Label, tk.Label]] = {}
         done = {r.test_id: r for r in app.results}
         for spec, _ in app.plan:
@@ -241,18 +327,13 @@ class RunPage(tk.Frame):
         self.overall.pack(anchor="w", pady=(T.px(0.3), 0))
         self.sensors = T.label(right, "", "small", T.MUTED)
         self.sensors.pack(anchor="w")
-        T.label(right, "You can leave the computer now, or play a game while you wait. The fans may get "
-                       "loud – that's expected. Results appear when all tests are done.", "small", T.MUTED,
-                wrap=T.px(55)).pack(anchor="w", pady=(T.px(0.6), 0))
         btns = tk.Frame(right, bg=T.BG)
         btns.pack(fill="x", pady=T.px(0.8))
         self.skip_btn = T.button(btns, "Skip this test  (S)", self.skip, "secondary", "small", takefocus=0)
         self.skip_btn.pack(side="left")
-        self.tab_btns = {}
-        for name, cls in reversed(GAMES):
-            b = T.button(btns, f"Play {name}", lambda c=cls: self.play(c), "primary", "small", takefocus=0)
-            b.pack(side="right", padx=(T.px(0.5), 0))
-            self.tab_btns[cls] = b
+        self.games_btn = T.button(btns, "Play a game while you wait", self.show_games, "primary", "small",
+                                  takefocus=0)
+        self.games_btn.pack(side="right", padx=(T.px(0.5), 0))
         self.log_btn = T.button(btns, "Test log", self.show_log, "secondary", "small", takefocus=0)
         self.log_btn.pack(side="right")
         self.done_banner = tk.Frame(right, bg=T.GOOD)
@@ -260,8 +341,9 @@ class RunPage(tk.Frame):
         self.content.pack(fill="both", expand=True)
         self.log = tk.Text(self.content, height=8, bg="#0b1220", fg=T.MUTED, font=T.FONTS["mono"], relief="flat",
                            highlightthickness=0, wrap="none", state="disabled")
-        self.log.pack(fill="both", expand=True)
+        self.picker = None
         self.game = None
+        self.show_games()
         self.frac: float | None = 0.0
         self.after(100, self.poll)
         self.after(500, self.update_sensors)
@@ -276,20 +358,47 @@ class RunPage(tk.Frame):
             name.configure(fg=T.MUTED)
 
     # --- games ------------------------------------------------------------------------------
+    def show_games(self):
+        self.close_game()
+        self.log.pack_forget()
+        self.set_skip_keys(True)
+        if self.picker is None:
+            self.picker = tk.Frame(self.content, bg=T.BG)
+            T.label(self.picker, "You can walk away now – or play something while I work:", "small",
+                    T.MUTED).pack(anchor="w", pady=(0, T.px(0.3)))
+            GamePicker(self.picker, self.play, self.launch_app).pack(fill="x")
+        self.picker.pack(fill="both", expand=True)
+
     def play(self, cls):
         self.close_game()
         self.log.pack_forget()
+        if self.picker is not None:
+            self.picker.pack_forget()
         self.set_skip_keys(False)  # S is a game key (WASD)
         self.game = cls(self.content)
         self.game.pack(fill="both", expand=True)
+        self.app.player.music("arcade")
+
+    def launch_app(self, app):
+        err = apps.launch(app)
+        if err:
+            self.bubble.set(err)
+        elif app.heavy and getattr(self, "spec", None) is not None and self.spec.test_id == "cpu":
+            self.bubble.set(f"Starting {app.name}! It may be a bit slow while I'm stress-testing the "
+                            "processor – that's normal.")
+        else:
+            self.bubble.set(f"Starting {app.name}! Close its window when you're done; I'll keep testing.")
 
     def close_game(self):
         if self.game is not None:
             self.game.destroy()
             self.game = None
+            self.app.player.music("chill")
 
     def show_log(self):
         self.close_game()
+        if self.picker is not None:
+            self.picker.pack_forget()
         self.log.pack(fill="both", expand=True)
         self.set_skip_keys(True)
 
@@ -303,6 +412,8 @@ class RunPage(tk.Frame):
     def all_done(self, show_results):
         """Tests finished while a game is open: offer the results instead of switching away."""
         self.title.configure(text="All tests are done!")
+        self.chip.set("excited")
+        self.bubble.set("All done! Finish your game, then let's look at the results together.")
         self.desc.configure(text="")
         self.msg.configure(text="Finish your game, then open the results.")
         self.frac = 1.0
@@ -319,6 +430,8 @@ class RunPage(tk.Frame):
         self.cancel = threading.Event()
         self.title.configure(text=spec.name)
         self.desc.configure(text=spec.description)
+        self.bubble.set(CHATTER.get(spec.test_id, "Working on it…"))
+        self.chip.set("thinking")
         self.msg.configure(text="Starting…")
         self.frac = 0.0
         self.started = time.monotonic()
@@ -399,9 +512,13 @@ class ResultsPage(tk.Frame):
 
         banner = tk.Frame(self, bg=T.STATUS_COLORS[status])
         banner.pack(fill="x")
-        T.label(banner, f"{T.STATUS_ICONS[status]}  {head}", "h1", "white").pack(
-            anchor="w", padx=T.px(2), pady=(T.px(1), 0))
-        T.label(banner, para, "body", "white", wrap=T.px(80)).pack(anchor="w", padx=T.px(2), pady=(0, T.px(1)))
+        Mascot(banner, T.px(5.5), VERDICT_FACE.get(status, "happy")).pack(side="left", padx=(T.px(1.5), T.px(1)),
+                                                                          pady=T.px(0.6))
+        words = tk.Frame(banner, bg=T.STATUS_COLORS[status])
+        words.pack(side="left", fill="x", expand=True, pady=T.px(0.6))
+        T.label(words, head, "h1", "white").pack(anchor="w")
+        line = VERDICT_LINE.get(status, "") + ("" if status is Status.PASS else " " + para)
+        T.label(words, line, "body", "white", wrap=T.px(70)).pack(anchor="w")
 
         bar = tk.Frame(self, bg=T.BG)
         bar.pack(side="bottom", fill="x", padx=T.px(1.5), pady=T.px(1))

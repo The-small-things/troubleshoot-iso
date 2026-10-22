@@ -1,5 +1,11 @@
 #!/bin/sh
-# X session: no desktop and no window manager, just the troubleshooter full screen.
+# X session: no desktop, just the troubleshooter full screen. Openbox gives the bundled apps
+# (Firefox, games...) title bars so they can be closed to get back to the troubleshooter.
+
+# Apps like Firefox and Disks expect a D-Bus session bus.
+if [ -z "$DBUS_SESSION_BUS_ADDRESS" ]; then
+    exec dbus-run-session -- "$0" "$@"
+fi
 
 xset s off -dpms s noblank 2>/dev/null
 
@@ -19,6 +25,9 @@ mkdir -p -m 0700 "$XDG_RUNTIME_DIR"
 pipewire >/var/log/pipewire.log 2>&1 &
 sleep 0.5
 wireplumber >/var/log/wireplumber.log 2>&1 &
+pipewire-pulse >/var/log/pipewire-pulse.log 2>&1 &  # sound for Firefox and games
+
+openbox --config-file /etc/troubleshoot/openbox-rc.xml >/var/log/openbox.log 2>&1 &
 
 # The app creates this file once its window is up; without it the session falls back to text mode.
 export TROUBLESHOOT_STARTED_FILE=/run/troubleshoot/gui-started

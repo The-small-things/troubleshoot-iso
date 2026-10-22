@@ -1,0 +1,27 @@
+# Open-source apps and games for the "Games & apps" page (see src/troubleshoot/apps.py).
+# Installed by hooks/live/0050-apps.hook.chroot; a package Debian doesn't have is skipped,
+# and the app hides anything that isn't installed. Keep the ISO under 2 GB (GitHub's
+# release-file limit): SuperTuxKart alone is ~700 MB.
+
+# Games
+supertuxkart
+# supertux        (232 MB – left out to stay under 2 GiB; the app shows it automatically if added)
+extremetuxracer
+neverball
+frozen-bubble
+
+# Internet
+firefox-esr
+
+# Drawing & painting
+tuxpaint
+drawing
+
+# Tools
+pcmanfm
+mousepad
+galculator
+lxterminal
+gnome-disk-utility
+gsmartcontrol
+glmark2-x11

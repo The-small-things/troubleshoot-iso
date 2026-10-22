@@ -9,12 +9,13 @@ lb config noauto \
 	--archive-areas "main contrib non-free non-free-firmware" \
 	--debian-installer none \
 	--apt-recommends false \
-	--firmware-binary true \
-	--firmware-chroot true \
+	--chroot-squashfs-compression-type xz \
+	--firmware-binary false \
+	--firmware-chroot false \
 	--memtest memtest86+ \
 	--iso-application "Hardware Troubleshooter" \
 	--iso-publisher "troubleshoot-iso" \
 	--iso-volume "TROUBLESHOOT" \
-	--bootappend-live "boot=live components quiet noautologin nox11autologin hostname=troubleshoot" \
+	--bootappend-live "boot=live components quiet splash loglevel=3 noautologin nox11autologin hostname=troubleshoot" \
 	--bootappend-live-failsafe "boot=live components noautologin nox11autologin hostname=troubleshoot nomodeset troubleshoot.text" \
 	"${@}"

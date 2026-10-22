@@ -1,0 +1,51 @@
+# BIOS boot menu. Installed over live-build's version by hooks/live/0500-boot-menu.hook.binary.
+menu resolution 640 480
+menu background splash.png
+menu title
+menu hshift 33
+menu width 46
+menu margin 0
+menu vshift 9
+menu rows 8
+menu helpmsgrow 21
+menu timeoutrow 24
+menu tabmsgrow 26
+menu cmdlinerow 26
+menu tabmsg Enter: start    Tab: edit options
+menu autoboot Starting the check-up in # second{,s}...
+menu color screen	37;40	#00000000 #00000000 none
+menu color border	*	#00000000 #00000000 none
+menu color title	*	#ffffffff #00000000 none
+menu color unsel	*	#ffcbd5e1 #00000000 none
+menu color sel		*	#ffffffff #ff3b82f6 none
+menu color hotkey	*	#ff93c5fd #00000000 none
+menu color hotsel	*	#ffffffff #ff3b82f6 none
+menu color disabled	*	#ff64748b #00000000 none
+menu color timeout_msg	*	#ff94a3b8 #00000000 none
+menu color timeout	*	#ffffffff #00000000 none
+menu color tabmsg	*	#ff94a3b8 #00000000 none
+menu color cmdline	*	#ffffffff #00000000 none
+menu color help		*	#ff94a3b8 #00000000 none
+
+label live
+	menu label ^Start the hardware check-up
+	menu default
+	linux /live/vmlinuz
+	initrd /live/initrd.img
+	append @APPEND@
+
+label safe
+	menu label Sa^fe mode (if the screen stays black)
+	linux /live/vmlinuz
+	initrd /live/initrd.img
+	append @APPEND_SAFE@
+
+label memtest
+	menu label Deep ^memory test (memtest86+)
+	linux /live/memtest.bin
+
+label verify
+	menu label Check this USB stick for ^errors
+	linux /live/vmlinuz
+	initrd /live/initrd.img
+	append @APPEND@ verify-checksums

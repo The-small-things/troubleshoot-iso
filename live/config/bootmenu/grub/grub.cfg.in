@@ -1,0 +1,36 @@
+# Installed over live-build's version by hooks/live/0500-boot-menu.hook.binary.
+# @APPEND@ / @APPEND_SAFE@ are filled in from the boot options in auto/config.
+source /boot/grub/config.cfg
+
+menuentry "Start the hardware check-up" --class chip --hotkey=s {
+	linux	/live/vmlinuz @APPEND@ findiso=${iso_path}
+	initrd	/live/initrd.img
+}
+menuentry "Safe mode (use this if the screen stays black)" --class safe --hotkey=f {
+	linux	/live/vmlinuz @APPEND_SAFE@ findiso=${iso_path}
+	initrd	/live/initrd.img
+}
+if [ "${grub_platform}" = "efi" -a -e /live/memtest.efi ]; then
+	menuentry "Deep memory test (memtest86+)" --class memory --hotkey=m {
+		linux	/live/memtest.efi
+	}
+elif [ "${grub_platform}" = "pc" -a -e /live/memtest.bin ]; then
+	menuentry "Deep memory test (memtest86+)" --class memory --hotkey=m {
+		linux	/live/memtest.bin
+	}
+fi
+menuentry "Check this USB stick for errors" --class verify --hotkey=v {
+	linux	/live/vmlinuz @APPEND@ findiso=${iso_path} verify-checksums
+	initrd	/live/initrd.img
+}
+if [ "${grub_platform}" = "efi" ]; then
+	menuentry "Open BIOS / UEFI settings" --class firmware --hotkey=b {
+		fwsetup
+	}
+fi
+menuentry "Restart" --class restart --hotkey=r {
+	reboot
+}
+menuentry "Power off" --class poweroff --hotkey=p {
+	halt
+}

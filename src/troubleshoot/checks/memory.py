@@ -110,7 +110,7 @@ def run(ctx: Context) -> Result:
         return Result("memory", NAME, Status.SKIP, "Not enough free memory to run the test.",
                       [f"Available: {avail // 1024} MB"])
 
-    cmd = ["memtester", f"{size}M", str(loops)]
+    cmd = ["nice", "-n", "10", "memtester", f"{size}M", str(loops)]
     ctx.log("Running: " + " ".join(cmd))
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                             start_new_session=True)

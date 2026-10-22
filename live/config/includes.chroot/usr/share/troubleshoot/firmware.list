@@ -1,0 +1,26 @@
+# Firmware for consumer laptops and desktops, installed by hooks/live/0050-optional-packages.hook.chroot
+# (a package Debian doesn't have is skipped). live-build's --firmware-chroot would install *every*
+# firmware package (server NICs, phone SoCs, TV tuners...), which doesn't fit the 2 GiB limit.
+
+firmware-linux-free
+firmware-misc-nonfree
+# Graphics
+firmware-amd-graphics
+firmware-intel-graphics
+firmware-nvidia-graphics
+# Wi-Fi / Bluetooth / Ethernet
+firmware-iwlwifi
+firmware-realtek
+firmware-atheros
+firmware-brcm80211
+firmware-mediatek
+firmware-libertas
+firmware-bnx2
+# Sound
+firmware-sof-signed
+firmware-intel-sound
+# Other Intel platform firmware (e.g. IPU, VPU)
+firmware-intel-misc
+# CPU microcode
+intel-microcode
+amd64-microcode

@@ -5,6 +5,9 @@ set -e
 # The app's Python package is copied in by build.sh; precompile it for faster start-up.
 python3 -m compileall -q /usr/lib/troubleshoot
 
+# Pre-render the synthesised music and sound effects so the app doesn't have to at start-up.
+PYTHONPATH=/usr/lib/troubleshoot python3 -m troubleshoot.sound /usr/share/troubleshoot/sounds
+
 # smartd could start its own self-tests in the background; we drive SMART ourselves.
 systemctl disable smartmontools.service 2>/dev/null || true
 systemctl disable smartd.service 2>/dev/null || true
@@ -14,5 +17,15 @@ systemctl mask systemd-networkd-wait-online.service 2>/dev/null || true
 
 # Larger console font for the text-mode fallback on high-resolution screens.
 sed -i 's/^FONTSIZE=.*/FONTSIZE="12x24"/' /etc/default/console-setup 2>/dev/null || true
+
+# Boot splash: Chip's theme reuses the stock spinner animation frames.
+if [ -d /usr/share/plymouth/themes/spinner ]; then
+	for f in /usr/share/plymouth/themes/spinner/*.png; do
+		case "$(basename "$f")" in watermark.png|bgrt-fallback.png) continue ;; esac
+		cp -n "$f" /usr/share/plymouth/themes/chip/
+	done
+	plymouth-set-default-theme chip
+	update-initramfs -u -k all
+fi
 
 chmod 0755 /usr/local/bin/troubleshoot /usr/local/bin/troubleshoot-session /usr/local/lib/troubleshoot/xsession

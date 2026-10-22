@@ -67,7 +67,7 @@ These apps open in their own window; close it to return to the troubleshooter.
 | | |
 |---|---|
 | Data rescue & recovery | PhotoRec (recover deleted files), TestDisk (lost partitions, boot repair), ddrescue (copy a failing drive, with a step-by-step guide), GParted (partitions; changes your drives) |
-| Repair & maintenance | Reset a Windows password (chntpw), Boot repair (efibootmgr, os-prober), Clonezilla (back up, restore or clone drives), Securely erase a drive (nwipe). The guided tools open a terminal with step-by-step instructions |
+| Repair & maintenance | Windows password reset (chntpw), Boot repair (efibootmgr, os-prober), Clonezilla (back up, restore or clone drives), Securely erase a drive (nwipe). The guided tools open a terminal with step-by-step instructions |
 | Games | SuperTuxKart, Extreme Tux Racer, Neverball, Frozen Bubble |
 | Internet | Firefox, plus a built-in **Wi-Fi & internet** screen to get online (Ethernet connects by itself) |
 | Drawing & painting | Tux Paint, Drawing |

@@ -53,7 +53,7 @@ CATALOG = [
         guide="/usr/share/troubleshoot/guides/ddrescue.txt"),
     App("gparted", "GParted", "View, resize and repair partitions. Careful: changes made here DO change your "
         "drives.", "rescue"),
-    App("chntpw", "Reset Windows password", "Clear a forgotten password on a local Windows account. Opens a "
+    App("chntpw", "Windows password", "Clear a forgotten password on a local Windows account. Opens a "
         "terminal with step-by-step instructions.", "repair", terminal=True,
         guide="/usr/share/troubleshoot/guides/windows-password.txt"),
     App("efibootmgr", "Boot repair", "Fix \"no bootable device\" and a wrong boot order. Opens a terminal with "

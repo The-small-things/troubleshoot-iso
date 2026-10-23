@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import random
 import tkinter as tk
 
@@ -10,11 +11,12 @@ from . import theme as T
 
 
 def draw(canvas: tk.Canvas, x: float, y: float, size: float, expression: str = "happy",
-         glow: float = 1.0, tag: str = "chip") -> None:
-    """Draw the mascot with its top-left corner at (x, y)."""
+         glow: float = 1.0, tag: str = "chip", blink: float = 0.0, look: tuple[float, float] = (0.0, 0.0),
+         parts: tuple[str, ...] = art.PARTS) -> None:
+    """Draw the mascot with its top-left corner at (x, y), replacing what ``tag`` drew before."""
     canvas.delete(tag)
     sc = lambda pts: [c for px, py in pts for c in (x + px * size, y + py * size)]  # noqa: E731
-    for shape in art.chip(expression, glow):
+    for shape in art.chip(expression, glow, blink, look, parts):
         kind = shape[0]
         if kind == "poly":
             _, pts, fill, outline, w = shape
@@ -30,35 +32,82 @@ def draw(canvas: tk.Canvas, x: float, y: float, size: float, expression: str = "
                                width=max(1, w * size) if outline else 0, tags=tag)
 
 
+BLINK = (0.5, 1.0, 1.0, 0.6, 0.25, 0.0)  # eyelid per frame: quick to close, a little slower to open
+FRAME_MS = 45
+
+
 class Mascot(tk.Canvas):
-    """An animated Chip: blinks now and then and its antenna pulses."""
+    """An animated Chip. The body is drawn once; the face is only redrawn when it changes.
+
+    Chip blinks every few seconds (open-eyed faces only), glances around now and then, and its
+    antenna glows softly. A new expression is swapped in while the eyes are shut, so faces change
+    with a blink instead of popping from one to the next.
+    """
 
     def __init__(self, master, size: int, expression: str = "happy", bg: str | None = None):
         super().__init__(master, width=size, height=size, bg=bg or master["bg"], highlightthickness=0)
         self.size = size
         self.expression = expression
-        self.phase = 0
-        self.blinking = 0
+        self.pending: str | None = None   # expression to show once the eyes are shut
+        self.blink_frames: list[float] = []
+        self.look = [0.0, 0.0]
+        self.look_target = (0.0, 0.0)
+        self.t = 0.0
+        self.next_blink = self.t + random.uniform(1.5, 4.0)
+        self.next_look = self.t + random.uniform(2.0, 5.0)
+        self.last_face = None
         self.job = None
-        self.animate()
+        draw(self, 0, 0, size, tag="body", parts=("body",))
+        self.redraw()
+        self.job = self.after(FRAME_MS, self.animate)
 
     def set(self, expression: str) -> None:
-        self.expression = expression
-        self.redraw()
+        target = self.pending or self.expression
+        if expression == target:
+            return
+        self.pending = expression
+        if not self.blink_frames:
+            self.blink_frames = list(BLINK)
+
+    @property
+    def blink(self) -> float:
+        return self.blink_frames[0] if self.blink_frames else 0.0
 
     def redraw(self):
-        glow = 0.5 + 0.5 * abs((self.phase % 20) - 10) / 10
-        expr = "blink" if self.blinking and self.expression in ("happy", "thinking") else self.expression
-        draw(self, 0, 0, self.size, expr, glow)
+        glow = 0.5 + 0.5 * math.sin(self.t * 2.2)
+        draw(self, 0, 0, self.size, glow=glow, tag="antenna", parts=("antenna",))
+        face = (self.expression, self.blink, round(self.look[0], 3), round(self.look[1], 3))
+        if face != self.last_face:
+            self.last_face = face
+            draw(self, 0, 0, self.size, self.expression, tag="face", blink=self.blink,
+                 look=tuple(self.look), parts=("face",))
 
     def animate(self):
-        self.phase += 1
-        if self.blinking:
-            self.blinking -= 1
-        elif random.random() < 0.03:
-            self.blinking = 2
+        self.t += FRAME_MS / 1000
+        if self.pending and not self.blink_frames:
+            self.blink_frames = list(BLINK)
+        if self.blink_frames:
+            if self.pending and self.blink >= 1.0:  # eyes shut: switch faces now
+                # Keep the eyes where they are and let them drift to the new face's resting place.
+                old = art.EYE_OFFSET.get(self.expression, (0.0, 0.0))
+                new = art.EYE_OFFSET.get(self.pending, (0.0, 0.0))
+                self.look = [old[0] + self.look[0] - new[0], old[1] + self.look[1] - new[1]]
+                self.look_target = (0.0, 0.0)
+                self.expression, self.pending = self.pending, None
+            self.blink_frames.pop(0)
+        elif self.t >= self.next_blink:
+            if self.expression in art.OPEN_EYES:
+                self.blink_frames = list(BLINK) + (list(BLINK) if random.random() < 0.15 else [])
+            self.next_blink = self.t + random.uniform(2.5, 6.0)
+        if self.t >= self.next_look:  # glance somewhere, mostly back to the middle
+            self.look_target = random.choice([(0.0, 0.0), (0.0, 0.0), (-0.02, 0.0), (0.02, 0.0), (0.015, -0.012),
+                                              (-0.015, 0.01)])
+            self.next_look = self.t + random.uniform(2.0, 6.0)
+        for i in (0, 1):  # ease towards where Chip is looking
+            d = self.look_target[i] - self.look[i]
+            self.look[i] = self.look_target[i] if abs(d) < 0.001 else self.look[i] + d * 0.35
         self.redraw()
-        self.job = self.after(120, self.animate)
+        self.job = self.after(FRAME_MS, self.animate)
 
     def destroy(self):
         if self.job:

@@ -16,7 +16,7 @@ import shutil
 import subprocess
 import sys
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageColor, ImageDraw, ImageFont
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "src"))
@@ -36,7 +36,7 @@ ACCENT = (96, 165, 250)
 
 
 def hexrgb(c: str) -> tuple[int, int, int]:
-    return int(c[1:3], 16), int(c[3:5], 16), int(c[5:7], 16)
+    return ImageColor.getrgb(c)[:3]  # "#rrggbb" or a colour name
 
 
 def draw_chip(d: ImageDraw.ImageDraw, x: float, y: float, size: float, expression="happy") -> None:

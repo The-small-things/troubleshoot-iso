@@ -600,7 +600,7 @@ class ResultsPage(tk.Frame):
         T.button(bar, "Run another test", app.welcome, "secondary").pack(side="left", padx=T.px(1))
         T.button(bar, "Power off", lambda: app.power("poweroff"), "secondary").pack(side="right")
         T.button(bar, "Restart", lambda: app.power("reboot"), "secondary").pack(side="right", padx=T.px(1))
-        self.saved = T.label(self, "", "small", T.MUTED)
+        self.saved = T.label(self, "", "small", T.MUTED, wrap=T.px(90))
         self.saved.pack(side="bottom", anchor="w", padx=T.px(1.5))
 
         body = tk.Frame(self, bg=T.BG)
@@ -706,11 +706,18 @@ class ResultsPage(tk.Frame):
                 t.insert("end", f"•  {r.name}: {r.summary}\n", ("bullet", "muted"))
 
     def save(self):
+        self.saved.configure(text="Saving…", fg=T.MUTED)
+        self.update_idletasks()
         try:
-            paths = report.save(self.app.results, self.app.profile.title)
-            self.saved.configure(text="Saved: " + "  ·  ".join(paths), fg=T.GOOD)
+            paths, problem = report.save(self.app.results, self.app.profile.title,
+                                         lambda q: messagebox.askyesno("Save to this USB stick?", q, parent=self))
         except OSError as e:
             self.saved.configure(text=f"Could not save the report: {e}", fg=T.BAD)
+            return
+        if problem:
+            self.saved.configure(text=problem + "  " + "  ·  ".join(paths), fg=T.WARN)
+        else:
+            self.saved.configure(text="Saved: " + "  ·  ".join(paths), fg=T.GOOD)
 
 
 def main(fast: bool = False, windowed: bool = False) -> None:

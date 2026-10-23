@@ -180,5 +180,8 @@ def main(fast: bool = False, profile_key: str | None = None) -> None:
     else:
         print(text)
     if ask("Save the report to a USB drive?") == "y":
-        for p in report.save(results, prof.title):
+        paths, problem = report.save(results, prof.title, lambda q: ask("\n" + q + "\n") == "y")
+        if problem:
+            print(problem)
+        for p in paths:
             print("Saved:", p)

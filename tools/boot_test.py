@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Boot the ISO in QEMU (UEFI and BIOS) and take screenshots along the way.
 
-    python3 tools/boot_test.py dist/troubleshoot-*.iso screenshots/ [--print-base64]
+    python3 tools/boot_test.py dist/troubleshoot-*.iso screenshots/ [--print-base64] [--usb-image stick.img]
 
 Screenshots show the boot menu, the boot splash and the app's welcome screen. With
 --print-base64 they're also written to stdout between markers (handy when the CI artifact
-can't be downloaded). Uses KVM when /dev/kvm is accessible, plain emulation otherwise.
+can't be downloaded). --usb-image also boots a USB stick image (BIOS and UEFI), e.g. one
+with a REPORTS partition added by the app, to check it still boots. Uses KVM when /dev/kvm is accessible, plain emulation otherwise.
 """
 
 from __future__ import annotations
@@ -31,14 +32,21 @@ def first(paths):
     raise SystemExit(f"none of {paths} found (install ovmf)")
 
 
-def boot(iso: str, out: str, mode: str, shots: list[int], actions: dict[int, str] | None = None) -> list[str]:
+def boot(iso: str, out: str, mode: str, shots: list[int], actions: dict[int, str] | None = None,
+         usb: bool = False) -> list[str]:
     """Take a screenshot at each time in ``shots`` (seconds). ``actions`` maps a time to a QEMU
-    monitor command, e.g. "sendkey g" or "eject -f ide1-cd0" (pull out the boot medium)."""
-    firmware = "bios" if mode.startswith("bios") else "uefi"
+    monitor command, e.g. "sendkey g" or "eject -f ide1-cd0" (pull out the boot medium).
+    With ``usb``, ``iso`` is a disk image attached as a USB stick instead of a CD."""
+    firmware = "bios" if "bios" in mode else "uefi"
     tmp = tempfile.mkdtemp()
     sock = os.path.join(tmp, "monitor.sock")
+    if usb:
+        medium = ["-drive", f"if=none,id=stick,format=raw,snapshot=on,file={iso}", "-device", "qemu-xhci",
+                  "-device", "usb-storage,drive=stick,bootindex=0"]
+    else:
+        medium = ["-cdrom", iso, "-boot", "d"]
     cmd = ["qemu-system-x86_64", "-m", "3072", "-smp", "2", "-vga", "std", "-display", "none",
-           "-cdrom", iso, "-boot", "d", "-monitor", f"unix:{sock},server,nowait",
+           *medium, "-monitor", f"unix:{sock},server,nowait",
            "-serial", f"file:{os.path.join(out, mode + '-serial.log')}"]
     kvm = os.access("/dev/kvm", os.R_OK | os.W_OK)
     if kvm:
@@ -89,6 +97,7 @@ def main() -> None:
     ap.add_argument("iso")
     ap.add_argument("out")
     ap.add_argument("--print-base64", action="store_true")
+    ap.add_argument("--usb-image", help="also boot this USB stick image (BIOS and UEFI)")
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
     # UEFI: menu, splash, welcome screen, then press G to open the Games & apps page.
@@ -99,6 +108,9 @@ def main() -> None:
     # are sent at 9-10 s; the 8 s shot shows the menu before the selection.
     shots += boot(a.iso, a.out, "uefi-toram", [8, 11, 90, 110, 125],
                   actions={9: "sendkey down", 10: "sendkey ret", 95: "eject -f ide1-cd0", 115: "sendkey g"})
+    if a.usb_image:
+        shots += boot(a.usb_image, a.out, "usb-uefi", [8, 60, 90], usb=True)
+        shots += boot(a.usb_image, a.out, "usb-bios", [8, 60, 90], usb=True)
     if a.print_base64:
         for p in shots:
             data = base64.b64encode(open(p, "rb").read()).decode()

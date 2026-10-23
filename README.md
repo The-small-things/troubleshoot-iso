@@ -115,8 +115,18 @@ or *"Interface CRC errors… almost always the cable, not the drive"*. If everyt
 says so, and suggests the problem is likely software.
 
 **Save report to USB drive** writes an HTML and a text report to any FAT/exFAT/NTFS/ext USB
-stick that's plugged in. If you boot with [Ventoy](https://www.ventoy.net), that includes the
-boot stick itself.
+stick that's plugged in. With no other USB drive plugged in, it offers to save onto the
+troubleshooter's own stick:
+
+- **Written with Etcher, `dd` or Rufus "DD mode"**: the first time, it adds a FAT32 drive
+  called **REPORTS** in the stick's unused space (after asking). The troubleshooter part of the
+  stick isn't changed and still boots. Plug the stick into another computer and open the REPORTS
+  drive to read the report. Later reports go there without asking.
+- **Files copied to the stick (Rufus "ISO mode")**: it saves into a `reports` folder on it.
+- **[Ventoy](https://www.ventoy.net)**: Ventoy keeps its drive locked while the system runs, so
+  use a second USB drive.
+
+After "Load into RAM", plug the stick back in before saving if you unplugged it.
 
 ## Getting the ISO
 
@@ -167,6 +177,7 @@ src/troubleshoot/          the Python app (stdlib + Tkinter only)
   gui/                     full-screen Tk interface: test pages, mascot, arcade (games.py, games3d.py)
   text_ui.py               text-mode fallback
   report.py                verdict, text/HTML report, saving to USB
+  bootstick.py             saving onto the troubleshooter's own stick (adds a REPORTS partition)
   catalog.py               test list and the Quick/Standard/Full/Custom profiles
 live/                      Debian live-build configuration (packages, autologin, X session)
   config/bootmenu/         branded GRUB/isolinux menus, installed by hooks/live/0500-boot-menu.hook.binary

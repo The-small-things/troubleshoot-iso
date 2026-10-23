@@ -48,3 +48,6 @@ pipewire-alsa
 wireplumber
 ntfs-3g
 exfatprogs
+# Saving the report onto the boot stick itself (see src/troubleshoot/bootstick.py)
+fdisk
+dosfstools

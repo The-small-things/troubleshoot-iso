@@ -47,12 +47,13 @@ def is_root() -> bool:
     return os.geteuid() == 0
 
 
-def run(cmd: list[str], timeout: float = 30, check: bool = False) -> subprocess.CompletedProcess:
+def run(cmd: list[str], timeout: float = 30, check: bool = False,
+        input: Optional[str] = None) -> subprocess.CompletedProcess:
     """Run a command and capture text output. Never raises for a missing tool."""
     try:
         return subprocess.run(
             cmd, capture_output=True, text=True, timeout=timeout, check=check,
-            errors="replace",
+            errors="replace", input=input,
         )
     except FileNotFoundError:
         return subprocess.CompletedProcess(cmd, 127, "", f"{cmd[0]}: not installed")

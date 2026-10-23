@@ -80,8 +80,12 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm || true
+      - name: Add a REPORTS partition to a USB stick image, as the app does
+        run: |
+          sudo apt-get install -y --no-install-recommends dosfstools fdisk
+          sudo tools/stick_test.sh dist/*.iso stick.img
       - name: Boot and take screenshots
-        run: python3 tools/boot_test.py dist/*.iso screenshots --print-base64
+        run: python3 tools/boot_test.py dist/*.iso screenshots --print-base64 --usb-image stick.img
       - uses: actions/upload-artifact@v4
         if: always()
         with:

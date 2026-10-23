@@ -8,7 +8,7 @@ import json
 import os
 import tempfile
 
-from . import util
+from . import bootstick, util
 from .model import Result, Status
 
 GENERIC_HEALTHY_STEPS = [
@@ -107,8 +107,13 @@ summary{{cursor:pointer;font-weight:600}}
     return "\n".join(parts)
 
 
-def _usb_targets() -> list[dict]:
-    res = util.run(["lsblk", "-J", "-o", "NAME,FSTYPE,RM,TRAN,MOUNTPOINT,LABEL,TYPE,PKNAME"])
+ESP_TYPES = ("0xef", "c12a7328-f81f-11d2-ba4b-00a0c93ec93b")  # EFI system partitions: boot files, not ours
+
+
+def _usb_targets(boot_disk: str | None = None) -> list[dict]:
+    """Writable partitions on removable drives. On the troubleshooter's own stick only its REPORTS
+    drive counts (see bootstick.py); the rest of it is the read-only image."""
+    res = util.run(["lsblk", "-J", "-o", "NAME,FSTYPE,RM,TRAN,MOUNTPOINT,LABEL,TYPE,PKNAME,PARTTYPE"])
     if res.returncode != 0:
         return []
     try:
@@ -117,24 +122,32 @@ def _usb_targets() -> list[dict]:
         return []
     out = []
 
-    def walk(devs, removable):
+    def walk(devs, removable, disk):
         for d in devs:
             rem = removable or d.get("tran") == "usb" or d.get("rm") in (True, 1, "1")
-            if rem and d.get("fstype") in ("vfat", "exfat", "ntfs", "ext4", "ext3", "ext2") \
-                    and d.get("type") == "part":
+            disk_name = disk or d["name"]
+            ours = boot_disk is not None and disk_name == boot_disk
+            if d.get("fstype") in ("vfat", "exfat", "ntfs", "ext4", "ext3", "ext2") and d.get("type") == "part" \
+                    and (d.get("parttype") or "").lower() not in ESP_TYPES \
+                    and (d.get("label") == bootstick.LABEL if ours else rem):
                 out.append(d)
-            walk(d.get("children", []), rem)
-    walk(tree, False)
+            walk(d.get("children", []), rem, disk_name)
+    walk(tree, False, None)
     return out
 
 
-def save(results: list[Result], profile: str) -> list[str]:
-    """Save the report to every writable USB partition (falls back to /root). Returns paths written."""
+def files_for(results: list[Result], profile: str) -> dict[str, str]:
     stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M")
-    files = {f"hardware-report-{stamp}.html": to_html(results, profile),
-             f"hardware-report-{stamp}.txt": to_text(results, profile)}
+    return {f"hardware-report-{stamp}.html": to_html(results, profile),
+            f"hardware-report-{stamp}.txt": to_text(results, profile)}
+
+
+def save_to_usb(files: dict[str, str]) -> list[str]:
+    """Save to every writable USB partition, other than the troubleshooter's own stick's image.
+    Returns descriptions of the files written (empty if there was nowhere to write)."""
+    stick = bootstick.find()
     written: list[str] = []
-    for d in _usb_targets():
+    for d in _usb_targets(stick["disk"] if stick else None):
         dev = f"/dev/{d['name']}"
         mnt = d.get("mountpoint")
         temp_mount = None
@@ -158,11 +171,44 @@ def save(results: list[Result], profile: str) -> list[str]:
             if temp_mount:
                 util.run(["umount", temp_mount])
                 os.rmdir(temp_mount)
-    if not written:
-        home = os.path.expanduser("~")
-        for name, content in files.items():
-            path = os.path.join(home, name)
-            with open(path, "w", encoding="utf-8") as f:
-                f.write(content)
-            written.append(path)
     return written
+
+
+def save_home(files: dict[str, str]) -> list[str]:
+    """Last resort: the live system's home folder (lost at shutdown)."""
+    home = os.path.expanduser("~")
+    written = []
+    for name, content in files.items():
+        path = os.path.join(home, name)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(content)
+        written.append(path)
+    return written
+
+
+CONFIRM_PARTITION = (
+    "No other USB drive is plugged in. Save the report onto this troubleshooter USB stick instead?\n\n"
+    "The first time, this adds a drive called REPORTS in the stick's unused space. The troubleshooter "
+    "on the stick isn't changed and still boots. On another computer, open the REPORTS drive to read "
+    "the report.")
+
+
+def save(results: list[Result], profile: str, confirm=lambda question: True) -> tuple[list[str], str | None]:
+    """Save to other USB drives; failing that, onto the troubleshooter's own stick (``confirm`` is
+    asked before adding a partition to it); failing that, the home folder.
+    Returns (files written, a warning to show or None)."""
+    files = files_for(results, profile)
+    written = save_to_usb(files)
+    if written:
+        return written, None
+    stick = bootstick.find()
+    if stick is None:
+        problem = "No USB drive found – plug one in and press Save again."
+    elif bootstick.needs_partition(stick) and not confirm(CONFIRM_PARTITION):
+        problem = "Not saved to a USB drive."
+    else:
+        try:
+            return bootstick.save(files), None
+        except bootstick.BootStickError as e:
+            problem = f"Couldn't save to this USB stick: {e}"
+    return save_home(files), problem + " Kept until the computer turns off in:"

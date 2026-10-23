@@ -49,32 +49,53 @@ def heart(cx, cy, s, steps=28):
     return pts
 
 
-def chip(expression: str = "happy", antenna_glow: float = 1.0) -> list[tuple]:
-    """The mascot's shapes for one expression. ``antenna_glow`` 0..1 animates the antenna ball."""
+OPEN_EYES = ("thinking", "worried")
+EYE_OFFSET = {"thinking": (0.03, -0.03), "sleepy": (0.0, 0.02)}  # where each face's eyes sit  # expressions drawn with round, open eyes (the ones that blink)
+PARTS = ("body", "antenna", "face")
+
+
+def chip(expression: str = "happy", antenna_glow: float = 1.0, blink: float = 0.0,
+         look: tuple[float, float] = (0.0, 0.0), parts: tuple[str, ...] = PARTS) -> list[tuple]:
+    """The mascot's shapes for one expression. ``antenna_glow`` 0..1 animates the antenna ball,
+    ``blink`` 0..1 closes the eyes (1 = shut), ``look`` shifts the eyes (in unit-square coordinates)
+    so Chip can glance around. ``parts`` selects layers, so an animation can redraw just the face."""
     shapes: list[tuple] = []
-    # Antenna.
-    shapes.append(("line", [(0.5, 0.13), (0.5, 0.05)], BODY_DARK, 0.022))
-    g = 0.03 + 0.015 * antenna_glow
-    shapes.append(("oval", (0.5, 0.04, g, g), ANTENNA, BODY_DARK, 0.008))
-    # Chip pins on both sides.
-    for y in (0.36, 0.5, 0.64):
-        shapes.append(("poly", rounded_rect(0.04, y - 0.035, 0.16, y + 0.035, 0.015, 2), PIN, BODY_DARK, 0.008))
-        shapes.append(("poly", rounded_rect(0.84, y - 0.035, 0.96, y + 0.035, 0.015, 2), PIN, BODY_DARK, 0.008))
-    # Body and face screen.
-    shapes.append(("poly", rounded_rect(0.12, 0.13, 0.88, 0.89, 0.15), BODY, BODY_DARK, 0.018))
-    shapes.append(("poly", rounded_rect(0.2, 0.24, 0.8, 0.66, 0.09), SCREEN, BODY_DARK, 0.01))
-    # Eyes.
-    ex = {"thinking": 0.03}.get(expression, 0.0)
-    ey = {"thinking": -0.03, "sleepy": 0.02}.get(expression, 0.0)
+    if "body" in parts:
+        shapes.append(("line", [(0.5, 0.13), (0.5, 0.05)], BODY_DARK, 0.022))  # antenna stalk
+        # Chip pins on both sides.
+        for y in (0.36, 0.5, 0.64):
+            shapes.append(("poly", rounded_rect(0.04, y - 0.035, 0.16, y + 0.035, 0.015, 2), PIN, BODY_DARK, 0.008))
+            shapes.append(("poly", rounded_rect(0.84, y - 0.035, 0.96, y + 0.035, 0.015, 2), PIN, BODY_DARK, 0.008))
+        # Body, face screen and the heart badge ("health check").
+        shapes.append(("poly", rounded_rect(0.12, 0.13, 0.88, 0.89, 0.15), BODY, BODY_DARK, 0.018))
+        shapes.append(("poly", rounded_rect(0.2, 0.24, 0.8, 0.66, 0.09), SCREEN, BODY_DARK, 0.01))
+        shapes.append(("poly", heart(0.5, 0.775, 0.065), HEART, BODY_DARK, 0.008))
+    if "antenna" in parts:
+        g = 0.03 + 0.015 * antenna_glow
+        shapes.append(("oval", (0.5, 0.04, g, g), ANTENNA, BODY_DARK, 0.008))
+    if "face" in parts:
+        shapes += _face(expression, max(0.0, min(1.0, blink)), look)
+    return shapes
+
+
+def _face(expression: str, blink: float, look: tuple[float, float]) -> list[tuple]:
+    shapes: list[tuple] = []
+    if expression == "blink":  # kept for callers that want a still of Chip blinking
+        expression, blink = "happy", 1.0
+    # Eyes. Every face closes to the same flat line at blink=1, so a blink can hide a change of face.
+    base = EYE_OFFSET.get(expression, (0.0, 0.0))
+    ex, ey = base[0] + look[0], base[1] + look[1]
     for x in (0.38, 0.62):
         cx, cy = x + ex, 0.42 + ey
-        if expression in ("happy", "excited"):
-            shapes.append(("line", arc(cx, cy + 0.025, 0.06, 0.055, 200, 340), GLOW, 0.028))
-        elif expression in ("blink", "sleepy"):
+        if expression == "sleepy" or blink >= 0.85:
             shapes.append(("line", [(cx - 0.055, cy), (cx + 0.055, cy)], GLOW, 0.026))
+        elif expression in ("happy", "excited"):  # smiling ^ ^ eyes flatten as they close
+            shapes.append(("line", arc(cx, cy + 0.025 * (1 - blink), 0.06, 0.055 * (1 - blink), 200, 340), GLOW,
+                           0.028))
         else:
-            shapes.append(("oval", (cx, cy, 0.062, 0.07), GLOW, None, 0))
-            shapes.append(("oval", (cx + 0.015, cy - 0.02, 0.02, 0.02), "white", None, 0))
+            shapes.append(("oval", (cx, cy, 0.062, 0.07 * (1 - blink) + 0.012 * blink), GLOW, None, 0))
+            if blink < 0.4:
+                shapes.append(("oval", (cx + 0.015, cy - 0.02, 0.02, 0.02), "white", None, 0))
     if expression == "worried":
         shapes.append(("line", [(0.31, 0.345), (0.43, 0.31)], GLOW, 0.02))
         shapes.append(("line", [(0.69, 0.345), (0.57, 0.31)], GLOW, 0.02))
@@ -89,11 +110,10 @@ def chip(expression: str = "happy", antenna_glow: float = 1.0) -> list[tuple]:
         shapes.append(("oval", (0.5, 0.56, 0.025, 0.02), GLOW, None, 0))
     else:
         shapes.append(("line", arc(0.5, 0.52, 0.08, 0.055, 20, 160), GLOW, 0.022))
-    # Cheeks and the heart badge ("health check").
-    if expression in ("happy", "excited", "blink"):
+    # Cheeks.
+    if expression in ("happy", "excited"):
         shapes.append(("oval", (0.29, 0.56, 0.035, 0.022), CHEEK, None, 0))
         shapes.append(("oval", (0.71, 0.56, 0.035, 0.022), CHEEK, None, 0))
-    shapes.append(("poly", heart(0.5, 0.775, 0.065), HEART, BODY_DARK, 0.008))
     return shapes
 
 
